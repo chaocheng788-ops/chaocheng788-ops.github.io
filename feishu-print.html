@@ -4,56 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>销售明细表 - 飞书多选打印版（241mm×279.4mm）</title>
-    <!-- 飞书插件适配依赖（核心：获取表格数据） -->
-    <!-- 替换方案1：飞书官方国内CDN（推荐） -->
-<!-- 注意：src路径要写对，比如文件和HTML在同一个文件夹，就直接写文件名 -->
-<script src="lark-sdk.umd.js" defer></script>
+    <!-- 修正：引用转换后的UMD格式SDK（之前转换的lark-sdk.umd.js） -->
+   <script src="lark-sdk.umd.js" defer></script>
     <style>
-        /* 基础样式：适配241mm×279.4mm多联打印纸 */
+        /* 原有样式保持不变 */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "仿宋", "SimSun", serif; /* 针式打印兼容字体 */
+            font-family: "仿宋", "SimSun", serif;
         }
         body {
-            width: 241mm; /* 多联纸标准宽度 */
-            padding: 8mm 10mm; /* 多联纸边距（上下8mm，左右10mm） */
+            width: 241mm;
+            padding: 8mm 10mm;
             margin: 0 auto;
             background: #fff;
-            font-size: 13px; /* 针式打印清晰字体大小 */
-            line-height: 1.4; /* 紧凑行高 */
+            font-size: 13px;
+            line-height: 1.4;
         }
-
-        /* 打印专用样式（多联针式打印优化） */
         @media print {
             body {
                 padding: 0;
                 margin: 0;
                 width: 100%;
-                height: auto; /* 连续走纸自适应高度 */
+                height: auto;
             }
             @page {
-                size: 241mm 279.4mm; /* 明确多联纸尺寸 */
-                margin: 8mm 10mm; /* 打印边距与页面一致 */
-                orphans: 2; /* 避免表格行顶部单独分页 */
-                widows: 2; /* 避免表格行底部单独分页 */
-                @top-center: none; /* 取消默认页眉 */
-                @bottom-center: none; /* 取消默认页脚 */
+                size: 241mm 279.4mm;
+                margin: 8mm 10mm;
+                orphans: 2;
+                widows: 2;
+                @top-center: none;
+                @bottom-center: none;
             }
             .no-print {
-                display: none !important; /* 隐藏非打印元素 */
+                display: none !important;
             }
             table {
-                page-break-inside: auto; /* 支持表格跨页打印 */
+                page-break-inside: auto;
             }
             th, td {
                 border-color: #000 !important;
-                border-width: 0.8px !important; /* 边框加粗适配复写 */
+                border-width: 0.8px !important;
             }
         }
-
-        /* 单据标题 */
         .title {
             text-align: center;
             font-size: 18px;
@@ -61,8 +55,6 @@
             margin-bottom: 10px;
             letter-spacing: 1px;
         }
-
-        /* 基础信息区域（紧凑网格布局） */
         .base-info {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -89,40 +81,35 @@
             padding: 1px 0;
             min-height: 18px;
         }
-
-        /* 商品明细表格（固定布局+字段适配） */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
             margin: 10px 0;
-            table-layout: fixed; /* 固定列宽避免错乱 */
+            table-layout: fixed;
         }
         .detail-table th, .detail-table td {
             border: 1px solid #000;
             padding: 6px 3px;
-             text-align: center;
+            text-align: center;
             vertical-align: middle;
             font-size: 12px;
-            word-break: break-all; /* 长文本换行 */
+            word-break: break-all;
         }
         .detail-table th {
             font-weight: bold;
         }
-        /* 表格列宽分配（适配241mm宽度） */
-        .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; } /* 物料编码 */
-        .detail-table th:nth-child(2), td:nth-child(2) { width: 12%; } /* 物料名称 */
-        .detail-table th:nth-child(3), td:nth-child(3) { width: 18%; } /* 规格型号 */
-        .detail-table th:nth-child(4), td:nth-child(4) { width: 6%; }  /* 单位 */
-        .detail-table th:nth-child(5), td:nth-child(5) { width: 8%; }  /* 数量 */
-        .detail-table th:nth-child(6), td:nth-child(6) { width: 12%; } /* 单价 */
-        .detail-table th:nth-child(7), td:nth-child(7) { width: 12%; } /* 金额 */
-        .detail-table th:nth-child(8), td:nth-child(8) { width: 20%; } /* 备注 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; }
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 12%; }
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 18%; }
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 6%; }
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 8%; }
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 12%; }
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 12%; }
+        .detail-table th:nth-child(8), td:nth-child(8) { width: 20%; }
         .detail-table .remark {
             text-align: left;
             padding-left: 5px;
         }
-
-        /* 合计区域 */
         .total-area {
             margin: 10px 0;
             text-align: right;
@@ -131,15 +118,13 @@
         .total-amount {
             font-size: 15px;
             font-weight: bold;
-            color: #000; /* 纯黑适配多联复写 */
+            color: #000;
             margin-left: 8px;
         }
         .amount-capital {
             margin-top: 4px;
             font-weight: 600;
         }
-
-        /* 底部信息 */
         .footer {
             margin-top: 15px;
             font-size: 12px;
@@ -156,8 +141,6 @@
             text-align: right;
             width: 40%;
         }
-
-        /* 操作按钮（飞书环境适配） */
         .btn-group {
             position: fixed;
             top: 15px;
@@ -186,8 +169,6 @@
         .refresh-btn:hover {
             background: #3d8b40;
         }
-
-        /* 提示信息（飞书环境专用） */
         .tip {
             margin: 10px 0;
             padding: 8px;
@@ -204,13 +185,13 @@
     </style>
 </head>
 <body>
-    <!-- 操作按钮（飞书内可见，打印隐藏） -->
+    <!-- 操作按钮 -->
     <div class="btn-group no-print">
         <button class="refresh-btn" onclick="loadSelectedData()">刷新选中数据</button>
         <button class="print-btn" onclick="printDocument()">打印选中数据</button>
     </div>
 
-    <!-- 飞书环境提示（非打印元素） -->
+    <!-- 提示信息 -->
     <div class="tip no-print">
         操作说明：1. 在飞书多维表格中选中要打印的行；2. 点击「刷新选中数据」加载数据；3. 确认无误后点击「打印选中数据」
     </div>
@@ -218,10 +199,8 @@
 
     <!-- 单据内容 -->
     <div class="invoice-container">
-        <!-- 标题 -->
         <div class="title">河南省飞马起重机械集团有限公司销售明细表</div>
 
-        <!-- 基础信息（可手动编辑或从飞书表格获取） -->
         <div class="base-info">
             <div class="info-item">
                 <span class="info-label">发票号：</span>
@@ -257,7 +236,6 @@
             </div>
         </div>
 
-        <!-- 商品明细表格（动态渲染选中数据） -->
         <table class="detail-table">
             <thead>
                 <tr>
@@ -272,14 +250,12 @@
                 </tr>
             </thead>
             <tbody id="detailTableBody">
-                <!-- 动态数据将在这里渲染 -->
                 <tr>
                     <td colspan="8" style="text-align: center; color: #666;">请在飞书表格中选中数据后，点击「刷新选中数据」</td>
                 </tr>
             </tbody>
         </table>
 
-        <!-- 合计区域（自动计算） -->
         <div class="total-area">
             <div>
                 数量合计：<span id="totalQuantity">0.00</span> 吨&nbsp;&nbsp;&nbsp;&nbsp;
@@ -291,7 +267,6 @@
             <div style="margin-top: 4px; font-size: 12px;">说明：此金额为含税价</div>
         </div>
 
-        <!-- 底部信息 -->
         <div class="footer">
             <div class="footer-left">
                 打印时间：<span id="printTime">2025年11月28日 09:47</span><br>
@@ -304,21 +279,19 @@
     </div>
 
     <script>
-        // ========================= 核心配置：飞书表格字段映射 =========================
-        // 请根据你的飞书表格字段ID修改以下映射（字段ID可在飞书表格「字段设置」中查看）
+        // 核心配置：飞书表格字段映射（必须修改为你的表格实际字段ID！）
         const FIELD_MAPPING = {
-            materialCode: "fld6mvGmkP", // 飞书表格「物料编码」字段ID
-            materialName: "fldTRySYAT", // 飞书表格「物料名称」字段ID
-            specification: "fld6mvGmkP", // 飞书表格「规格型号」字段ID
-            unit: "fld6mvGmkP", // 飞书表格「单位」字段ID（默认吨）
-            quantity: "fld6mvGmkP", // 飞书表格「数量」字段ID
-            unitPrice: "fld6mvGmkP", // 飞书表格「单价」字段ID
-            amount: "fld6mvGmkP", // 飞书表格「金额」字段ID（可选，若没有则自动计算）
-            remark: "fld6mvGmkP" // 飞书表格「备注」字段ID（可选）
+            materialCode: "fld6mvGmkP", // 替换为「物料编码」字段ID
+            materialName: "fldTRySYAT", // 替换为「物料名称」字段ID
+            specification: "fld6mvGmkP", // 替换为「规格型号」字段ID
+            unit: "fld6mvGmkP", // 替换为「单位」字段ID
+            quantity: "fld6mvGmkP", // 替换为「数量」字段ID
+            unitPrice: "fld6mvGmkP", // 替换为「单价」字段ID
+            amount: "fld6mvGmkP", // 替换为「金额」字段ID（可选）
+            remark: "fld6mvGmkP" // 替换为「备注」字段ID（可选）
         };
-        // ===========================================================================
 
-        // 金额大写转换工具
+        // 金额大写转换工具（保持不变）
         function convertToCapital(amount) {
             const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
             const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿'];
@@ -359,7 +332,7 @@
             return capital;
         }
 
-        // 加载飞书表格选中行数据
+        // 加载飞书表格选中行数据（核心修正：替换方法名和变量名）
         async function loadSelectedData() {
             const errorTip = document.getElementById('errorTip');
             const tableBody = document.getElementById('detailTableBody');
@@ -367,7 +340,7 @@
             try {
                 // 1. 检查飞书SDK是否加载成功
                 if (!window.bitable || !window.bitable.base) {
-                    throw new Error('飞书SDK加载失败，请在飞书多维表格中使用该插件');
+                    throw new Error('飞书SDK加载失败，请确认lark-sdk.umd.js文件路径正确');
                 }
 
                 // 2. 获取当前活跃表格
@@ -376,34 +349,34 @@
                     throw new Error('未找到当前活跃表格，请打开飞书多维表格后重试');
                 }
 
-                // 3. 获取选中的记录（行数据）
-                const selectedRecords = await table.getSelectedRecords();
-                if (selectedRecords.length === 0) {
+                // 核心修正：将getSelectedRecords()改为飞书正确方法getSelectedRows()
+                const selectedRows = await table.getSelectedRows();
+                if (selectedRows.length === 0) {
                     throw new Error('未选中任何数据，请在表格中选择要打印的行后重试');
                 }
 
-                // 4. 验证字段映射是否完整（核心字段必须配置）
+                // 4. 验证字段映射是否完整
                 const requiredFields = ['materialCode', 'materialName', 'specification', 'quantity', 'unitPrice'];
                 const missingFields = requiredFields.filter(key => !FIELD_MAPPING[key] || FIELD_MAPPING[key].includes('xxxx'));
                 if (missingFields.length > 0) {
                     throw new Error(`请配置飞书表格字段映射：${missingFields.join('、')}（修改代码中FIELD_MAPPING配置）`);
                 }
 
-                // 5. 处理选中数据，渲染表格
-                let totalQuantity = 0; // 总数量
-                let totalAmount = 0;   // 总金额
+                // 5. 处理选中数据，渲染表格（变量名同步改为selectedRows）
+                let totalQuantity = 0;
+                let totalAmount = 0;
                 let tableHtml = '';
 
-                for (const record of selectedRecords) {
-                    const fields = record.fields;
+                for (const row of selectedRows) { // 这里变量名从record改为row，更贴合飞书的行概念
+                    const fields = row.fields; // 飞书行数据的字段仍通过fields获取，格式不变
                     // 提取字段值（适配飞书表格字段类型）
                     const materialCode = fields[FIELD_MAPPING.materialCode] || '';
                     const materialName = fields[FIELD_MAPPING.materialName] || '';
                     const specification = fields[FIELD_MAPPING.specification] || '';
-                    const unit = fields[FIELD_MAPPING.unit] || '吨'; // 默认单位为吨
+                    const unit = fields[FIELD_MAPPING.unit] || '吨';
                     const quantity = parseFloat(fields[FIELD_MAPPING.quantity]) || 0;
                     const unitPrice = parseFloat(fields[FIELD_MAPPING.unitPrice]) || 0;
-                    const amount = fields[FIELD_MAPPING.amount] ? parseFloat(fields[FIELD_MAPPING.amount]) : (quantity * unitPrice); // 金额优先取表格值，无则计算
+                    const amount = fields[FIELD_MAPPING.amount] ? parseFloat(fields[FIELD_MAPPING.amount]) : (quantity * unitPrice);
                     const remark = fields[FIELD_MAPPING.remark] || '';
 
                     // 累加合计
@@ -433,26 +406,24 @@
                 errorTip.style.display = 'none';
 
             } catch (err) {
-                // 异常处理：显示错误提示
+                // 异常处理
                 errorTip.textContent = `错误：${err.message}`;
                 errorTip.style.display = 'block';
                 tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
             }
         }
 
-        // 打印功能（飞书/浏览器兼容）
+        // 打印功能（保持不变）
         function printDocument() {
             const tableBody = document.getElementById('detailTableBody');
             const errorTip = document.getElementById('errorTip');
 
-            // 检查是否有有效数据
             if (tableBody.querySelector('td[colspan="8"]') || tableBody.children.length === 0) {
                 errorTip.textContent = '错误：无有效打印数据，请先加载选中数据';
                 errorTip.style.display = 'block';
                 return;
             }
 
-            // 飞书环境优先使用飞书打印API
             if (window.bitable && window.bitable.base) {
                 try {
                     window.bitable.base.print({
@@ -471,17 +442,15 @@
             }
         }
 
-        // 初始化：更新打印时间 + 检查飞书环境
+        // 初始化（保持不变）
         window.onload = function() {
-            // 更新当前打印时间
             const now = new Date();
             const formatTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             document.getElementById('printTime').textContent = formatTime;
 
-            // 飞书环境自动尝试加载选中数据（可选）
             if (window.bitable && window.bitable.base) {
                 setTimeout(() => {
-                    loadSelectedData().catch(() => {}); // 失败不提示，避免干扰用户
+                    loadSelectedData().catch(() => {});
                 }, 1000);
             }
         };
