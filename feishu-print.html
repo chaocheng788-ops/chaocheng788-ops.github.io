@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>销售明细表 - 飞书打印版</title>
-    <script src="lark-sdk.umd.js" defer></script>
+ <script src="lark-sdk.umd.js" defer></script>
     <style>
         /* 保持原有样式不变 */
         * {
@@ -50,6 +50,7 @@
         .refresh-btn { background: #4CAF50; }
         .tip { margin: 10px 0; padding: 8px; border-left: 3px solid #007fff; font-size: 12px; }
         .error-tip { background: #fff8f8; border-left: 3px solid #d32f2f; color: #d32f2f; }
+        .debug-log { margin: 5px 0; padding: 5px; font-size: 11px; background: #f9f9f9; border-radius: 3px; } /* 新增调试日志样式 */
     </style>
 </head>
 <body>
@@ -62,6 +63,8 @@
         操作步骤：1. 确保在「表格视图」中；2. 点击行首复选框选中行；3. 点击「刷新选中数据」
     </div>
     <div id="errorTip" class="tip error-tip no-print" style="display: none;"></div>
+    <!-- 新增调试信息区域（仅开发时可见） -->
+    <div id="debugArea" class="no-print" style="display: none; margin: 10px 0;"></div>
 
     <div class="invoice-container">
         <div class="title">河南省飞马起重机械集团有限公司销售明细表</div>
@@ -107,11 +110,11 @@
     </div>
 
     <script>
-        // 全局变量：存储选中行ID（核心）
+        // 全局变量：存储选中行ID
         let selectedRecordIds = [];
         // 字段映射（必须替换为你的实际字段ID！）
         const FIELD_MAPPING = {
-            materialCode: "fld实际物料编码ID", // 例：fld123456
+            materialCode: "fld实际物料编码ID", // 示例：fldABC123（需替换）
             materialName: "fld实际物料名称ID",
             specification: "fld实际规格ID",
             unit: "fld实际单位ID",
@@ -119,6 +122,20 @@
             unitPrice: "fld实际单价ID",
             remark: "fld实际备注ID"
         };
+
+        // 调试日志工具（显示在页面上，方便非开发者查看）
+        function addDebugLog(message) {
+            const debugArea = document.getElementById('debugArea');
+            debugArea.style.display = 'block';
+            const logItem = document.createElement('div');
+            logItem.className = 'debug-log';
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugArea.appendChild(logItem);
+            // 只保留最近10条日志
+            if (debugArea.children.length > 10) {
+                debugArea.removeChild(debugArea.firstChild);
+            }
+        }
 
         // 金额大写转换
         function convertToCapital(amount) {
@@ -149,100 +166,136 @@
             return capital;
         }
 
-        // 初始化选中事件监听（核心逻辑）
+        // 初始化选中事件监听（严格遵循SDK文档规范）
         async function initSelectionListener() {
             try {
-                // 等待SDK加载完成（最多等5秒）
+                addDebugLog('开始初始化选中事件监听...');
+                
+                // 1. 等待SDK加载完成（最多等8秒，每1秒检查一次）
                 let waitCount = 0;
                 while (!window.bitable || !window.bitable.base) {
-                    if (waitCount > 50) throw new Error('飞书SDK加载超时');
+                    if (waitCount >= 80) { // 80 * 100ms = 8秒
+                        throw new Error('飞书SDK加载超时，请检查网络或重新打开页面');
+                    }
                     await new Promise(resolve => setTimeout(resolve, 100));
                     waitCount++;
                 }
+                addDebugLog('飞书SDK加载成功');
 
+                // 2. 获取Base实例并检查权限（关键步骤）
                 const base = window.bitable.base;
-                // 绑定选中事件
-                base.onSelectionChange(async (selection) => {
-                    console.log('=== 选中事件触发 ===', selection); // 关键日志：查看selection结构
+                const authStatus = await base.getAuthStatus(); // 官方权限检查API
+                addDebugLog(`当前插件权限：${JSON.stringify(authStatus)}`);
+                if (!authStatus.includes('bitable:readonly')) {
+                    throw new Error('插件缺少「bitable:readonly」权限，请在飞书开发者后台配置并重新安装插件');
+                }
+
+                // 3. 绑定选中事件（严格按文档格式）
+                base.onSelectionChange((selection) => {
+                    addDebugLog(`选中事件触发，原始数据：${JSON.stringify(selection)}`);
                     
-                    // 提取ID（兼容3种可能的格式）
+                    // 提取选中ID（覆盖文档中所有可能的格式）
                     let ids = [];
-                    if (selection.recordIds && selection.recordIds.length > 0) {
-                        ids = selection.recordIds; // 格式1：{recordIds: [...]}
-                    } else if (selection.recordId) {
-                        ids = [selection.recordId]; // 格式2：{recordId: "..."}
-                    } else if (selection.records && selection.records.length > 0) {
-                        ids = selection.records.map(r => r.id); // 格式3：{records: [{id: "..."}]}
+                    if (Array.isArray(selection.recordIds)) {
+                        ids = selection.recordIds; // 标准格式：数组
+                    } else if (typeof selection.recordId === 'string') {
+                        ids = [selection.recordId]; // 单行选中格式
+                    } else if (Array.isArray(selection.records)) {
+                        ids = selection.records.map(r => r.id); // 包含完整记录的格式
                     }
 
                     selectedRecordIds = ids;
-                    console.log('当前选中行ID：', selectedRecordIds); // 确认ID是否正确存储
+                    addDebugLog(`解析后选中行ID：${ids.length > 0 ? ids.join(',') : '无'}`);
                 });
 
-                console.log('选中事件监听已启动（请在表格中选中行，查看控制台日志）');
+                addDebugLog('选中事件监听初始化成功（可开始选中行）');
             } catch (err) {
-                console.error('初始化监听失败：', err);
-                document.getElementById('errorTip').textContent = `监听初始化失败：${err.message}`;
+                const errorMsg = `监听初始化失败：${err.message}`;
+                addDebugLog(errorMsg);
+                document.getElementById('errorTip').textContent = errorMsg;
                 document.getElementById('errorTip').style.display = 'block';
             }
         }
 
-        // 加载选中数据（双重校验）
+        // 加载选中数据（完全遵循官方API流程）
         async function loadSelectedData() {
             const errorTip = document.getElementById('errorTip');
             const tableBody = document.getElementById('detailTableBody');
             errorTip.style.display = 'none';
+            addDebugLog('开始加载选中数据...');
 
             try {
-                // 1. 检查SDK
+                // 1. 检查SDK实例
                 if (!window.bitable || !window.bitable.base) {
-                    throw new Error('飞书SDK未加载（请确认lark-sdk.umd.js路径正确）');
+                    throw new Error('飞书SDK未初始化，请刷新页面重试');
                 }
-
-                // 2. 获取表格
                 const base = window.bitable.base;
-                const table = await base.getActiveTable();
-                if (!table) throw new Error('未找到活跃表格（请在飞书多维表格中打开）');
 
-                // 3. 双重校验选中ID：优先用缓存，为空则强制调用getSelection()
+                // 2. 获取当前活跃表格（官方推荐方式）
+                addDebugLog('尝试获取当前活跃表格...');
+                const table = await base.getActiveTable();
+                if (!table) {
+                    throw new Error('未找到活跃表格，请确认在飞书多维表格的「表格视图」中打开');
+                }
+                addDebugLog(`获取表格成功，表格ID：${table.id}`);
+
+                // 3. 双重校验选中ID（事件缓存 + 主动查询）
                 let ids = selectedRecordIds;
                 if (ids.length === 0) {
-                    console.log('缓存中无选中ID，尝试调用getSelection()兜底...');
-                    const selection = await base.getSelection();
-                    if (selection.recordIds) ids = selection.recordIds;
-                    else if (selection.recordId) ids = [selection.recordId];
-                    else if (selection.records) ids = selection.records.map(r => r.id);
+                    addDebugLog('缓存中无选中ID，尝试主动调用getSelection()...');
+                    const selection = await base.getSelection(); // 官方主动查询API
+                    addDebugLog(`getSelection返回数据：${JSON.stringify(selection)}`);
+                    
+                    // 解析主动查询结果
+                    if (Array.isArray(selection.recordIds)) {
+                        ids = selection.recordIds;
+                    } else if (typeof selection.recordId === 'string') {
+                        ids = [selection.recordId];
+                    } else if (Array.isArray(selection.records)) {
+                        ids = selection.records.map(r => r.id);
+                    }
                 }
 
                 // 4. 验证选中状态
                 if (ids.length === 0) {
                     throw new Error(`未检测到选中行！可能原因：
-1. 未在「表格视图」中操作（看板/表单视图不支持选中）
-2. 选中后未刷新（请重新选中并点击刷新）
-3. 插件无权限（需在飞书插件设置中开启「读取表格数据」权限）`);
+1. 未在「表格视图」中操作（仅表格视图支持行选中）
+2. 选中后未刷新（请重新勾选行首复选框并点击刷新）
+3. 表格无数据或选中行被筛选隐藏（清除筛选后重试）`);
+                }
+                addDebugLog(`最终选中行ID：${ids.join(',')}`);
+
+                // 5. 获取并筛选记录（官方Record API）
+                addDebugLog('开始获取表格记录...');
+                const allRecords = await table.getRecordList(); // 获取所有记录
+                addDebugLog(`表格共${allRecords.length}条记录，筛选选中行...`);
+                const selectedRecords = allRecords.filter(record => ids.includes(record.id));
+
+                if (selectedRecords.length === 0) {
+                    throw new Error('选中行ID在表格中未找到对应记录（可能已被删除或筛选隐藏）');
                 }
 
-                // 5. 获取并筛选记录
-                const allRecords = await table.getRecordList();
-                const selectedRecords = allRecords.filter(r => ids.includes(r.id));
-                console.log('筛选出的选中记录：', selectedRecords);
-
-                // 6. 渲染表格
+                // 6. 渲染表格数据
                 let totalQuantity = 0, totalAmount = 0, tableHtml = '';
                 for (const record of selectedRecords) {
-                    const getVal = async (fieldId) => {
+                    // 封装字段获取方法（兼容官方API）
+                    const getFieldValue = async (fieldKey) => {
+                        const fieldId = FIELD_MAPPING[fieldKey];
+                        if (!fieldId || fieldId.includes('实际')) {
+                            throw new Error(`未配置正确的字段ID：${fieldKey}（请修改FIELD_MAPPING）`);
+                        }
                         const cell = await record.getCellByField(fieldId);
                         return cell ? await cell.getValue() : '';
                     };
 
-                    const materialCode = await getVal(FIELD_MAPPING.materialCode) || '';
-                    const materialName = await getVal(FIELD_MAPPING.materialName) || '';
-                    const specification = await getVal(FIELD_MAPPING.specification) || '';
-                    const unit = await getVal(FIELD_MAPPING.unit) || '吨';
-                    const quantity = parseFloat(await getVal(FIELD_MAPPING.quantity)) || 0;
-                    const unitPrice = parseFloat(await getVal(FIELD_MAPPING.unitPrice)) || 0;
+                    const materialCode = await getFieldValue('materialCode') || '';
+                    const materialName = await getFieldValue('materialName') || '';
+                    const specification = await getFieldValue('specification') || '';
+                    const unit = await getFieldValue('unit') || '吨';
+                    const quantity = parseFloat(await getFieldValue('quantity')) || 0;
+                    const unitPrice = parseFloat(await getFieldValue('unitPrice')) || 0;
                     const amount = quantity * unitPrice;
-                    const remark = await getVal(FIELD_MAPPING.remark) || '';
+                    const remark = await getFieldValue('remark') || '';
 
                     totalQuantity += quantity;
                     totalAmount += amount;
@@ -266,34 +319,56 @@
                 document.getElementById('totalQuantity').textContent = totalQuantity.toFixed(2);
                 document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
                 document.getElementById('capitalAmount').textContent = convertToCapital(totalAmount);
+                addDebugLog('数据加载成功，共渲染' + selectedRecords.length + '行');
 
             } catch (err) {
-                errorTip.textContent = `错误：${err.message}`;
+                const errorMsg = `错误：${err.message}`;
+                addDebugLog(errorMsg);
+                errorTip.textContent = errorMsg;
                 errorTip.style.display = 'block';
-                console.error('加载失败详情：', err);
+                tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
             }
         }
 
-        // 打印功能
+        // 打印功能（兼容官方API）
         function printDocument() {
             const tableBody = document.getElementById('detailTableBody');
             if (tableBody.querySelector('td[colspan="8"]') || tableBody.children.length === 0) {
-                document.getElementById('errorTip').textContent = '无数据可打印，请先加载选中数据';
+                const errorMsg = '无数据可打印，请先加载选中数据';
+                document.getElementById('errorTip').textContent = errorMsg;
                 document.getElementById('errorTip').style.display = 'block';
+                addDebugLog(errorMsg);
                 return;
             }
-            window.bitable?.base?.print()?.catch(() => window.print());
+
+            // 优先使用飞书打印API，失败则降级为浏览器打印
+            if (window.bitable?.base) {
+                addDebugLog('尝试调用飞书打印API...');
+                window.bitable.base.print({
+                    success: () => addDebugLog('飞书打印成功触发'),
+                    fail: (err) => {
+                        addDebugLog(`飞书打印API调用失败：${err.message}，切换为浏览器打印`);
+                        window.print();
+                    }
+                });
+            } else {
+                addDebugLog('未检测到飞书环境，使用浏览器打印');
+                window.print();
+            }
         }
 
-        // 初始化
-        window.onload = function() {
+        // 初始化入口（确保DOM和SDK加载完成）
+        window.addEventListener('DOMContentLoaded', async () => {
             // 更新打印时间
             const now = new Date();
             document.getElementById('printTime').textContent = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             
             // 启动事件监听
-            initSelectionListener();
-        };
+            await initSelectionListener();
+
+            // 提示用户操作
+            addDebugLog('初始化完成，请在表格中选中行后点击「刷新选中数据」');
+        });
     </script>
 </body>
 </html>
