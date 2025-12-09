@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>销售明细表 - 飞书多选打印版（241mm×279.4mm）</title>
-    <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
-     <script src="lark-sdk.umd.js" defer></script>
+    <script src="lark-sdk.umd.js" defer></script>
     <style>
-        /* 基础样式：适配241mm×279.4mm多联打印纸 */
+        /* 保持原有样式不变 */
         * {
             margin: 0;
             padding: 0;
@@ -22,8 +21,6 @@
             font-size: 13px;
             line-height: 1.4;
         }
-
-        /* 打印专用样式优化 */
         @media print {
             body {
                 padding: 0;
@@ -50,8 +47,6 @@
                 border-width: 0.8px !important;
             }
         }
-
-        /* 单据标题 */
         .title {
             text-align: center;
             font-size: 18px;
@@ -59,8 +54,6 @@
             margin-bottom: 10px;
             letter-spacing: 1px;
         }
-
-        /* 基础信息区域 */
         .base-info {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -87,8 +80,6 @@
             padding: 1px 0;
             min-height: 18px;
         }
-
-        /* 商品明细表格 */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
@@ -106,7 +97,6 @@
         .detail-table th {
             font-weight: bold;
         }
-        /* 表格列宽分配 */
         .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; }
         .detail-table th:nth-child(2), td:nth-child(2) { width: 12%; }
         .detail-table th:nth-child(3), td:nth-child(3) { width: 18%; }
@@ -119,8 +109,6 @@
             text-align: left;
             padding-left: 5px;
         }
-
-        /* 合计区域 */
         .total-area {
             margin: 10px 0;
             text-align: right;
@@ -136,8 +124,6 @@
             margin-top: 4px;
             font-weight: 600;
         }
-
-        /* 底部信息 */
         .footer {
             margin-top: 15px;
             font-size: 12px;
@@ -154,8 +140,6 @@
             text-align: right;
             width: 40%;
         }
-
-        /* 操作按钮 */
         .btn-group {
             position: fixed;
             top: 15px;
@@ -184,8 +168,6 @@
         .refresh-btn:hover {
             background: #3d8b40;
         }
-
-        /* 提示信息 */
         .tip {
             margin: 10px 0;
             padding: 8px;
@@ -202,19 +184,16 @@
     </style>
 </head>
 <body>
-    <!-- 操作按钮（非打印元素） -->
     <div class="btn-group no-print">
         <button class="refresh-btn" onclick="loadSelectedData()">刷新选中数据</button>
         <button class="print-btn" onclick="printDocument()">打印选中数据</button>
     </div>
 
-    <!-- 提示信息 -->
     <div class="tip no-print">
-        操作说明：1. 在飞书多维表格中选中要打印的行；2. 点击「刷新选中数据」加载数据；3. 确认无误后点击「打印选中数据」
+        操作说明：1. 在飞书多维表格中通过行首复选框选中要打印的行；2. 点击「刷新选中数据」加载数据；3. 确认无误后点击「打印选中数据」
     </div>
     <div id="errorTip" class="tip error-tip no-print" style="display: none;"></div>
 
-    <!-- 单据内容 -->
     <div class="invoice-container">
         <div class="title">河南省飞马起重机械集团有限公司销售明细表</div>
 
@@ -296,19 +275,20 @@
     </div>
 
     <script>
-        // ========================= 核心配置：飞书表格字段映射 =========================
-        // ！！！必须替换为你的表格实际字段ID（获取方式：飞书表格→字段设置→复制字段ID）
+        // 全局变量：存储实时选中的行ID（核心优化点）
+        let selectedRecordIds = [];
+
+        // 飞书表格字段映射（必须替换为实际字段ID）
         const FIELD_MAPPING = {
             materialCode: "fld6mvGmkP", // 物料编码字段ID
             materialName: "fldTRySYAT", // 物料名称字段ID
-            specification: "fld6mvGmkP", // 规格型号字段ID
-            unit: "fld6mvGmkP", // 单位字段ID
-            quantity: "fld6mvGmkP", // 数量字段ID
-            unitPrice: "fld6mvGmkP", // 单价字段ID
+            specification: "fld6mvGmkP", // 规格型号字段ID（需替换）
+            unit: "fld6mvGmkP", // 单位字段ID（需替换）
+            quantity: "fld6mvGmkP", // 数量字段ID（需替换）
+            unitPrice: "fld6mvGmkP", // 单价字段ID（需替换）
             amount: "fld6mvGmkP", // 金额字段ID（可选）
             remark: "fld6mvGmkP" // 备注字段ID（可选）
         };
-        // ===========================================================================
 
         // 金额大写转换工具
         function convertToCapital(amount) {
@@ -351,85 +331,104 @@
             return capital;
         }
 
-        // 加载飞书表格选中行数据（基于base.getSelection()优化，适配1.0.0版本SDK）
+        // 初始化选中事件监听（核心优化点）
+        function initSelectionListener() {
+            try {
+                if (!window.bitable || !window.bitable.base) {
+                    console.warn('SDK未加载，1秒后重试监听...');
+                    setTimeout(initSelectionListener, 1000);
+                    return;
+                }
+
+                const base = window.bitable.base;
+                // 监听选中状态变化事件，实时更新选中ID
+                base.onSelectionChange((selection) => {
+                    console.log('选中状态更新：', selection);
+                    // 处理单选/多选场景
+                    if (selection.recordIds && selection.recordIds.length > 0) {
+                        selectedRecordIds = selection.recordIds;
+                    } else if (selection.recordId) {
+                        selectedRecordIds = [selection.recordId];
+                    } else {
+                        selectedRecordIds = [];
+                    }
+                });
+
+                console.log('选中事件监听初始化成功');
+            } catch (err) {
+                console.error('初始化监听失败：', err);
+                setTimeout(initSelectionListener, 1000); // 失败重试
+            }
+        }
+
+        // 加载选中数据（核心优化点：使用事件缓存的ID）
         async function loadSelectedData() {
             const errorTip = document.getElementById('errorTip');
             const tableBody = document.getElementById('detailTableBody');
             
             try {
-                // 1. 检查SDK是否加载成功
+                // 1. 检查SDK
                 if (!window.bitable || !window.bitable.base) {
-                    throw new Error('飞书SDK加载失败，请确认lark-sdk.umd.js文件路径正确');
+                    throw new Error('飞书SDK加载失败，请确认lark-sdk.umd.js路径正确');
                 }
 
-                // 2. 获取base实例和当前活跃表格
-               const base = window.bitable.base; // 1.0.0版本中，base本身就是实例，无需调用getBase()
-                const table = await window.bitable.base.getActiveTable(); // 获取当前活跃表格
+                // 2. 获取表格实例
+                const base = window.bitable.base;
+                const table = await base.getActiveTable();
                 if (!table) {
-                    throw new Error('未找到当前活跃表格，请打开飞书多维表格后重试');
+                    throw new Error('未找到活跃表格，请在飞书多维表格中打开插件');
                 }
 
-                // 3. 核心：用base.getSelection()获取选中的记录ID（飞书插件官方API）
-                const selection = await base.getSelection();
-                console.log('选中信息原始数据：', selection); // 调试用，可删除
-
-                // 验证选中结果（兼容不同版本的返回格式）
-                if (!selection || !selection.recordIds || selection.recordIds.length === 0) {
-                    // 兼容部分版本可能用recordId字段
-                    if (selection?.recordId) {
-                        // 如果返回单个ID，转为数组
-                        selection.recordIds = [selection.recordId];
-                    } else {
-                        throw new Error('未选中任何数据，请在表格中选择要打印的行后重试');
-                    }
+                // 3. 验证选中数据（使用全局缓存的ID）
+                if (selectedRecordIds.length === 0) {
+                    throw new Error('未检测到选中行，请通过行首复选框选择至少一行');
                 }
-                const selectedRecordIds = selection.recordIds; // 提取选中的记录ID数组
+                console.log('使用选中ID：', selectedRecordIds);
 
-                // 4. 获取表格所有记录，筛选出选中的记录
-                const allRecords = await table.getRecordList(); // 获取表格所有记录
+                // 4. 获取并筛选记录
+                const allRecords = await table.getRecordList();
                 const selectedRecords = allRecords.filter(record => 
                     selectedRecordIds.includes(record.id)
-                ); // 筛选选中的记录
+                );
 
-                // 5. 验证字段映射是否完整
+                // 5. 验证字段配置
                 const requiredFields = ['materialCode', 'materialName', 'specification', 'quantity', 'unitPrice'];
-                const missingFields = requiredFields.filter(key => !FIELD_MAPPING[key] || FIELD_MAPPING[key].includes('xxxx'));
+                const missingFields = requiredFields.filter(key => !FIELD_MAPPING[key] || FIELD_MAPPING[key] === 'fld6mvGmkP');
                 if (missingFields.length > 0) {
-                    throw new Error(`请配置飞书表格字段映射：${missingFields.join('、')}（修改代码中FIELD_MAPPING配置）`);
+                    throw new Error(`请配置正确的字段ID：${missingFields.join('、')}（在FIELD_MAPPING中修改）`);
                 }
 
-                // 6. 处理选中数据，渲染表格
+                // 6. 渲染表格
                 let totalQuantity = 0;
                 let totalAmount = 0;
                 let tableHtml = '';
 
                 for (const record of selectedRecords) {
-                    // 辅助函数：通过字段ID获取单元格值（适配1.0.0版本的Record模块）
                     const getCellValue = async (fieldId) => {
                         try {
-                            const cell = await record.getCellByField(fieldId); // 官方方法：获取单元格
-                            return cell ? await cell.getValue() : ''; // 获取单元格值
+                            const cell = await record.getCellByField(fieldId);
+                            return cell ? await cell.getValue() : '';
                         } catch (e) {
-                            console.warn(`获取字段${fieldId}值失败：`, e);
+                            console.warn(`字段${fieldId}获取失败：`, e);
                             return '';
                         }
                     };
 
-                    // 提取字段值（调用辅助函数，处理异步）
                     const materialCode = await getCellValue(FIELD_MAPPING.materialCode) || '';
                     const materialName = await getCellValue(FIELD_MAPPING.materialName) || '';
                     const specification = await getCellValue(FIELD_MAPPING.specification) || '';
                     const unit = await getCellValue(FIELD_MAPPING.unit) || '吨';
                     const quantity = parseFloat(await getCellValue(FIELD_MAPPING.quantity)) || 0;
                     const unitPrice = parseFloat(await getCellValue(FIELD_MAPPING.unitPrice)) || 0;
-                    const amount = fields[FIELD_MAPPING.amount] ? parseFloat(await getCellValue(FIELD_MAPPING.amount)) : (quantity * unitPrice);
+                    // 修复原代码中fields变量未定义的问题
+                    const amount = FIELD_MAPPING.amount 
+                        ? parseFloat(await getCellValue(FIELD_MAPPING.amount)) 
+                        : (quantity * unitPrice);
                     const remark = await getCellValue(FIELD_MAPPING.remark) || '';
 
-                    // 累加合计
                     totalQuantity += quantity;
                     totalAmount += amount;
 
-                    // 生成表格行HTML
                     tableHtml += `
                         <tr>
                             <td>${materialCode}</td>
@@ -444,7 +443,7 @@
                     `;
                 }
 
-                // 7. 更新表格和合计信息
+                // 7. 更新页面
                 tableBody.innerHTML = tableHtml;
                 document.getElementById('totalQuantity').textContent = totalQuantity.toFixed(2);
                 document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
@@ -452,27 +451,24 @@
                 errorTip.style.display = 'none';
 
             } catch (err) {
-                // 异常处理：显示错误提示
                 errorTip.textContent = `错误：${err.message}`;
                 errorTip.style.display = 'block';
                 tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
-                console.error('加载数据失败：', err); // 控制台打印详细错误，方便调试
+                console.error('加载失败：', err);
             }
         }
 
-        // 打印功能（飞书/浏览器兼容）
+        // 打印功能
         function printDocument() {
             const tableBody = document.getElementById('detailTableBody');
             const errorTip = document.getElementById('errorTip');
 
-            // 检查是否有有效数据
             if (tableBody.querySelector('td[colspan="8"]') || tableBody.children.length === 0) {
                 errorTip.textContent = '错误：无有效打印数据，请先加载选中数据';
                 errorTip.style.display = 'block';
                 return;
             }
 
-            // 飞书环境优先使用飞书打印API
             if (window.bitable && window.bitable.base) {
                 try {
                     window.bitable.base.print({
@@ -491,19 +487,20 @@
             }
         }
 
-        // 初始化：更新打印时间 + 检查飞书环境
+        // 页面初始化
         window.onload = function() {
-            // 更新当前打印时间
+            // 更新打印时间
             const now = new Date();
             const formatTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             document.getElementById('printTime').textContent = formatTime;
 
-            // 飞书环境自动尝试加载选中数据（可选）
-            if (window.bitable && window.bitable.base) {
-                setTimeout(() => {
-                    loadSelectedData().catch(() => {}); // 失败不提示，避免干扰用户
-                }, 1000);
-            }
+            // 初始化选中事件监听（核心优化点）
+            initSelectionListener();
+
+            // 延迟尝试加载数据
+            setTimeout(() => {
+                loadSelectedData().catch(() => {});
+            }, 1500);
         };
     </script>
 </body>
