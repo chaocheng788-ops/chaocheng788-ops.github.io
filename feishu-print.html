@@ -363,7 +363,7 @@
                 }
 
                 // 2. 获取base实例和当前活跃表格
-                const base = await window.bitable.base.getBase(); // 获取base实例
+               const base = window.bitable.base; // 1.0.0版本中，base本身就是实例，无需调用getBase()
                 const table = await window.bitable.base.getActiveTable(); // 获取当前活跃表格
                 if (!table) {
                     throw new Error('未找到当前活跃表格，请打开飞书多维表格后重试');
