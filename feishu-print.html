@@ -445,12 +445,39 @@ if (allRecords.length === 0) {
     console.log(`✅ 成功提取记录数组，共 ${allRecords.length} 条记录`);
 }
 
-                // ========== 步骤7：筛选出选中的记录 ==========
-                console.log('【步骤7】筛选选中的记录（根据recordId列表）');
-                const selectedRecords = allRecords.filter(record => 
-                    selectedRecordIds.includes(record.id)
-                );
-                console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条：`, selectedRecords);
+                // ========== 步骤7：筛选选中的记录（根据recordId列表） ==========
+console.log('【步骤7】筛选选中的记录（根据recordId列表）');
+// 1. 先打印一条记录的结构，确认id字段名称（关键调试）
+if (allRecords.length > 0) {
+    console.log('第一条记录的完整结构：', allRecords[0]); 
+    // 观察日志中id的属性名，比如：可能是recordId / id / _id 等
+}
+
+// 2. 验证selectedRecordIds是否为数组
+if (!Array.isArray(selectedRecordIds)) {
+    throw new Error(`选中的recordId列表格式异常，不是数组：${JSON.stringify(selectedRecordIds)}`);
+}
+if (!Array.isArray(allRecords)) {
+    throw new Error('表格记录不是数组，无法筛选：' + typeof allRecords);
+}
+
+// 3. 修正筛选条件：根据实际id字段名称调整（这里假设是recordId，需根据日志修改）
+// ！！！关键：把record.id改为记录真实的id字段名（如record.recordId）
+const selectedRecords = allRecords.filter(record => {
+    // 打印当前记录的id值，观察是否与selectedRecordIds匹配
+    const recordId = record.recordId; // 假设id字段是recordId，需根据实际日志修改
+    console.log('当前记录的id：', recordId, '选中的id列表：', selectedRecordIds);
+    
+    // 额外校验recordId是否存在
+    if (!recordId) {
+        console.warn('⚠️ 跳过无id的异常记录：', record);
+        return false;
+    }
+    // 检查是否包含在选中列表中
+    return selectedRecordIds.includes(recordId);
+});
+
+console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条：`, selectedRecords);
 
                 // ========== 步骤8：验证字段映射配置 ==========
                 console.log('【步骤8】验证字段映射配置');
