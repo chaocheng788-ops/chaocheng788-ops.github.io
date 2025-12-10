@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>销售明细表 - 飞书多选打印版（241mm×279.4mm）</title>
-    <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
-   <script src="lark-sdk.umd.js" defer></script>
+    <script src="lark-sdk.umd.js" defer></script>
     <style>
-        /* 基础样式：适配241mm×279.4mm多联打印纸 */
         * {
             margin: 0;
             padding: 0;
@@ -22,8 +20,6 @@
             font-size: 13px;
             line-height: 1.4;
         }
-
-        /* 打印专用样式优化 */
         @media print {
             body {
                 padding: 0;
@@ -50,8 +46,6 @@
                 border-width: 0.8px !important;
             }
         }
-
-        /* 单据标题 */
         .title {
             text-align: center;
             font-size: 18px;
@@ -59,8 +53,6 @@
             margin-bottom: 10px;
             letter-spacing: 1px;
         }
-
-        /* 基础信息区域 */
         .base-info {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -87,8 +79,6 @@
             padding: 1px 0;
             min-height: 18px;
         }
-
-        /* 商品明细表格 */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
@@ -106,7 +96,6 @@
         .detail-table th {
             font-weight: bold;
         }
-        /* 表格列宽分配 */
         .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; }
         .detail-table th:nth-child(2), td:nth-child(2) { width: 12%; }
         .detail-table th:nth-child(3), td:nth-child(3) { width: 18%; }
@@ -119,8 +108,6 @@
             text-align: left;
             padding-left: 5px;
         }
-
-        /* 合计区域 */
         .total-area {
             margin: 10px 0;
             text-align: right;
@@ -136,8 +123,6 @@
             margin-top: 4px;
             font-weight: 600;
         }
-
-        /* 底部信息 */
         .footer {
             margin-top: 15px;
             font-size: 12px;
@@ -154,8 +139,6 @@
             text-align: right;
             width: 40%;
         }
-
-        /* 操作按钮 */
         .btn-group {
             position: fixed;
             top: 15px;
@@ -184,8 +167,6 @@
         .refresh-btn:hover {
             background: #3d8b40;
         }
-
-        /* 提示信息 */
         .tip {
             margin: 10px 0;
             padding: 8px;
@@ -202,19 +183,16 @@
     </style>
 </head>
 <body>
-    <!-- 操作按钮（非打印元素） -->
     <div class="btn-group no-print">
         <button class="refresh-btn" onclick="loadSelectedData()">选择并加载数据</button>
         <button class="print-btn" onclick="printDocument()">打印选中数据</button>
     </div>
 
-    <!-- 提示信息 -->
     <div class="tip no-print">
         操作说明：1. 点击「选择并加载数据」唤起记录选择对话框；2. 在对话框中选择要打印的记录并确认；3. 确认无误后点击「打印选中数据」
     </div>
     <div id="errorTip" class="tip error-tip no-print" style="display: none;"></div>
 
-    <!-- 单据内容 -->
     <div class="invoice-container">
         <div class="title">河南省飞马起重机械集团有限公司销售明细表</div>
 
@@ -296,21 +274,17 @@
     </div>
 
     <script>
-        // ========================= 核心配置：飞书表格字段映射 =========================
-        // ！！！必须替换为你的表格实际字段ID（获取方式：飞书表格→字段设置→复制字段ID）
         const FIELD_MAPPING = {
-            materialCode: "fld6mvGmkP", // 物料编码字段ID
-            materialName: "fldTRySYAT", // 物料名称字段ID
-            specification: "fld6mvGmkP", // 规格型号字段ID
-            unit: "fld6mvGmkP", // 单位字段ID
-            quantity: "fld6mvGmkP", // 数量字段ID
-            unitPrice: "fld6mvGmkP", // 单价字段ID
-            amount: "fld6mvGmkP", // 金额字段ID（可选）
-            remark: "fld6mvGmkP" // 备注字段ID（可选）
+            materialCode: "fld6mvGmkP", // 物料编码字段ID（替换为实际ID）
+            materialName: "fldTRySYAT", // 物料名称字段ID（替换为实际ID）
+            specification: "fld6mvGmkP", // 规格型号字段ID（替换为实际ID）
+            unit: "fld6mvGmkP", // 单位字段ID（替换为实际ID）
+            quantity: "fld6mvGmkP", // 数量字段ID（替换为实际ID）
+            unitPrice: "fld6mvGmkP", // 单价字段ID（替换为实际ID）
+            amount: "fld6mvGmkP", // 金额字段ID（可选，替换为实际ID）
+            remark: "fld6mvGmkP" // 备注字段ID（可选，替换为实际ID）
         };
-        // ===========================================================================
 
-        // 金额大写转换工具
         function convertToCapital(amount) {
             const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
             const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿'];
@@ -351,20 +325,19 @@
             return capital;
         }
 
-        // 核心改造：通过selectRecordIdList唤起选择对话框获取记录ID并加载数据
         async function loadSelectedData() {
             const errorTip = document.getElementById('errorTip');
             const tableBody = document.getElementById('detailTableBody');
             
             try {
-                // ========== 步骤1：检查SDK加载状态 ==========
+                // 步骤1：检查SDK加载状态
                 console.log('【步骤1】检查飞书SDK加载状态');
                 if (!window.bitable || !window.bitable.base || !window.bitable.ui) {
                     throw new Error('飞书SDK加载失败，请确认lark-sdk.umd.js文件路径正确');
                 }
                 console.log('✅ SDK加载成功，bitable对象：', window.bitable);
 
-                // ========== 步骤2：获取base实例 ==========
+                // 步骤2：获取base实例
                 console.log('【步骤2】获取base实例');
                 const base = window.bitable.base;
                 if (!base) {
@@ -372,16 +345,14 @@
                 }
                 console.log('✅ base实例获取成功：', base);
 
-                // ========== 步骤3：获取tableId和viewId ==========
+                // 步骤3：获取tableId和viewId
                 console.log('【步骤3】获取当前活跃表格的tableId和viewId');
-                // 获取选中信息（提取tableId和viewId）
                 const selection = await base.getSelection();
                 console.log('原始selection数据：', selection);
                 
                 let tableId = selection?.tableId;
                 let viewId = selection?.viewId;
                 
-                // 兼容：如果selection中没有，从活跃表格获取
                 if (!tableId) {
                     const activeTable = await base.getActiveTable();
                     tableId = activeTable?.id;
@@ -393,179 +364,5 @@
                 }
                 console.log(`✅ tableId和viewId获取成功：tableId=${tableId}, viewId=${viewId}`);
 
-                // ========== 步骤4：调用selectRecordIdList唤起选择对话框 ==========
-                console.log('【步骤4】调用bitable.ui.selectRecordIdList唤起记录选择对话框');
-                // 核心API：唤起选择对话框，返回选中的recordId列表
-                const selectedRecordIds = await window.bitable.ui.selectRecordIdList(tableId, viewId);
-                console.log('✅ 选择对话框返回的recordId列表：', selectedRecordIds);
-
-                // 验证选中结果
-                if (!selectedRecordIds || selectedRecordIds.length === 0) {
-                    throw new Error('未在对话框中选择任何记录，请重新选择');
-                }
-                console.log(`✅ 共选中 ${selectedRecordIds.length} 条记录`);
-
-                // ========== 步骤5：获取当前活跃表格实例 ==========
-                console.log('【步骤5】获取当前活跃表格实例');
-                const table = await base.getActiveTable();
-                if (!table) {
-                    throw new Error('未找到当前活跃表格');
-                }
-                console.log('✅ 表格实例获取成功：', table);
-
-                // ========== 步骤6：获取表格所有记录 ==========
-                console.log('【步骤6】获取表格所有记录');
-                const allRecords = await table.getRecordList();
-                console.log(`✅ 获取到表格所有记录，共 ${allRecords.length} 条：`, allRecords);
-
-                // ========== 步骤7：筛选出选中的记录 ==========
-                console.log('【步骤7】筛选选中的记录（根据recordId列表）');
-                const selectedRecords = allRecords.filter(record => 
-                    selectedRecordIds.includes(record.id)
-                );
-                console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条：`, selectedRecords);
-
-                // ========== 步骤8：验证字段映射配置 ==========
-                console.log('【步骤8】验证字段映射配置');
-                const requiredFields = ['materialCode', 'materialName', 'specification', 'quantity', 'unitPrice'];
-                const missingFields = requiredFields.filter(key => 
-                    !FIELD_MAPPING[key] || FIELD_MAPPING[key].includes('xxxx')
-                );
-                if (missingFields.length > 0) {
-                    throw new Error(`请配置飞书表格字段映射：${missingFields.join('、')}（修改代码中FIELD_MAPPING配置）`);
-                }
-                console.log('✅ 字段映射配置验证通过');
-
-                // ========== 步骤9：处理数据并渲染表格 ==========
-                console.log('【步骤9】处理选中记录数据并渲染表格');
-                let totalQuantity = 0;
-                let totalAmount = 0;
-                let tableHtml = '';
-
-                // 辅助函数：通过字段ID获取单元格值
-                const getCellValue = async (record, fieldId) => {
-                    try {
-                        const cell = await record.getCellByField(fieldId);
-                        const value = cell ? await cell.getValue() : '';
-                        console.log(`获取字段[${fieldId}]值：`, value);
-                        return value;
-                    } catch (e) {
-                        console.warn(`获取字段${fieldId}值失败：`, e);
-                        return '';
-                    }
-                };
-
-                // 遍历选中记录
-                for (let i = 0; i < selectedRecords.length; i++) {
-                    const record = selectedRecords[i];
-                    console.log(`处理第 ${i+1} 条记录（ID：${record.id}）`);
-
-                    // 提取各字段值
-                    const materialCode = await getCellValue(record, FIELD_MAPPING.materialCode) || '';
-                    const materialName = await getCellValue(record, FIELD_MAPPING.materialName) || '';
-                    const specification = await getCellValue(record, FIELD_MAPPING.specification) || '';
-                    const unit = await getCellValue(record, FIELD_MAPPING.unit) || '吨';
-                    const quantity = parseFloat(await getCellValue(record, FIELD_MAPPING.quantity)) || 0;
-                    const unitPrice = parseFloat(await getCellValue(record, FIELD_MAPPING.unitPrice)) || 0;
-                    // 修复原BUG：金额优先从字段获取，无则计算
-                    const amountFieldValue = await getCellValue(record, FIELD_MAPPING.amount);
-                    const amount = amountFieldValue ? parseFloat(amountFieldValue) : (quantity * unitPrice);
-                    const remark = await getCellValue(record, FIELD_MAPPING.remark) || '';
-
-                    // 累加合计
-                    totalQuantity += quantity;
-                    totalAmount += amount;
-
-                    // 生成表格行HTML
-                    tableHtml += `
-                        <tr>
-                            <td>${materialCode}</td>
-                            <td>${materialName}</td>
-                            <td>${specification}</td>
-                            <td>${unit}</td>
-                            <td>${quantity.toFixed(2)}</td>
-                            <td>${unitPrice.toFixed(2)}</td>
-                            <td>${amount.toFixed(2)}</td>
-                            <td class="remark">${remark}</td>
-                        </tr>
-                    `;
-                }
-
-                // ========== 步骤10：更新页面显示 ==========
-                console.log('【步骤10】更新表格和合计信息');
-                // 更新表格内容
-                tableBody.innerHTML = tableHtml;
-                // 更新合计数据
-                document.getElementById('totalQuantity').textContent = totalQuantity.toFixed(2);
-                document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
-                // 更新大写金额
-                document.getElementById('capitalAmount').textContent = convertToCapital(totalAmount);
-                // 隐藏错误提示
-                errorTip.style.display = 'none';
-
-                console.log('✅ 所有数据加载完成，合计数量：', totalQuantity, '合计金额：', totalAmount);
-
-            } catch (err) {
-                // 异常处理：显示错误提示 + 控制台打印
-                console.error('❌ 加载数据失败：', err);
-                errorTip.textContent = `错误：${err.message}`;
-                errorTip.style.display = 'block';
-                tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
-            }
-        }
-
-        // 打印功能（飞书/浏览器兼容）
-        function printDocument() {
-            const tableBody = document.getElementById('detailTableBody');
-            const errorTip = document.getElementById('errorTip');
-
-            console.log('【打印功能】触发打印操作');
-            // 检查是否有有效数据
-            if (tableBody.querySelector('td[colspan="8"]') || tableBody.children.length === 0) {
-                const errMsg = '无有效打印数据，请先选择并加载数据';
-                console.error('❌ 打印失败：', errMsg);
-                errorTip.textContent = `错误：${errMsg}`;
-                errorTip.style.display = 'block';
-                return;
-            }
-
-            // 飞书环境优先使用飞书打印API
-            if (window.bitable && window.bitable.base) {
-                try {
-                    console.log('尝试调用飞书内置打印API');
-                    window.bitable.base.print({
-                        success: () => console.log('✅ 飞书打印触发成功'),
-                        fail: (err) => {
-                            console.error('❌ 飞书打印失败，切换为浏览器打印：', err);
-                            window.print();
-                        }
-                    });
-                } catch (e) {
-                    console.warn('⚠️ 飞书打印API调用失败，使用浏览器打印：', e);
-                    window.print();
-                }
-            } else {
-                console.log('非飞书环境，使用浏览器打印');
-                window.print();
-            }
-        }
-
-        // 初始化：更新打印时间 + 检查飞书环境
-        window.onload = function() {
-            console.log('【初始化】页面加载完成，执行初始化操作');
-            // 更新当前打印时间
-            const now = new Date();
-            const formatTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            document.getElementById('printTime').textContent = formatTime;
-            console.log(`✅ 打印时间已更新为：${formatTime}`);
-
-            // 检查飞书环境
-            if (window.bitable && window.bitable.base) {
-                console.log('✅ 检测到飞书环境，初始化完成');
-            } else {
-                console.warn('⚠️ 未检测到飞书环境，部分功能可能无法使用');
-            }
-        };
-    </script>
-</body>
-</html>
+                // 步骤4：调用selectRecordIdList唤起选择对话框
+                console.log
