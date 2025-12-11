@@ -1,4 +1,300 @@
-<script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售明细表 - 飞书多选打印版（241mm×279.4mm）</title>
+    <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
+    <script src="lark-sdk.umd.js" defer></script>
+    <style>
+        /* 基础样式：适配241mm×279.4mm多联打印纸 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "仿宋", "SimSun", serif;
+        }
+        body {
+            width: 241mm;
+            padding: 8mm 10mm;
+            margin: 0 auto;
+            background: #fff;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        /* 打印专用样式优化 */
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+                width: 100%;
+                height: auto;
+            }
+            @page {
+                size: 241mm 279.4mm;
+                margin: 8mm 10mm;
+                orphans: 2;
+                widows: 2;
+                @top-center: none;
+                @bottom-center: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+            table {
+                page-break-inside: auto;
+            }
+            th, td {
+                border-color: #000 !important;
+                border-width: 0.8px !important;
+            }
+        }
+
+        /* 单据标题 */
+        .title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* 基础信息区域 */
+        .base-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px 15px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 8px;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .info-label {
+            width: 75px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .info-value {
+            flex: 1;
+            border-bottom: 1px dashed #333;
+            padding: 1px 0;
+            min-height: 18px;
+        }
+
+        /* 商品明细表格 */
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            table-layout: fixed;
+        }
+        .detail-table th, .detail-table td {
+            border: 1px solid #000;
+            padding: 6px 3px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        .detail-table th {
+            font-weight: bold;
+        }
+        /* 表格列宽分配 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; }
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 12%; }
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 18%; }
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 6%; }
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 8%; }
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 12%; }
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 12%; }
+        .detail-table th:nth-child(8), td:nth-child(8) { width: 20%; }
+        .detail-table .remark {
+            text-align: left;
+            padding-left: 5px;
+        }
+
+        /* 合计区域 */
+        .total-area {
+            margin: 10px 0;
+            text-align: right;
+            font-size: 14px;
+        }
+        .total-amount {
+            font-size: 15px;
+            font-weight: bold;
+            color: #000;
+            margin-left: 8px;
+        }
+        .amount-capital {
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        /* 底部信息 */
+        .footer {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .footer-left {
+            text-align: left;
+            width: 60%;
+        }
+        .footer-right {
+            text-align: right;
+            width: 40%;
+        }
+
+        /* 操作按钮 */
+        .btn-group {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 9999;
+            display: flex;
+            gap: 10px;
+        }
+        .print-btn, .refresh-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #fff;
+        }
+        .print-btn {
+            background: #007fff;
+        }
+        .print-btn:hover {
+            background: #0066cc;
+        }
+        .refresh-btn {
+            background: #4CAF50;
+        }
+        .refresh-btn:hover {
+            background: #3d8b40;
+        }
+
+        /* 提示信息 */
+        .tip {
+            margin: 10px 0;
+            padding: 8px;
+            background: #f5f5f5;
+            border-left: 3px solid #007fff;
+            font-size: 12px;
+            color: #333;
+        }
+        .error-tip {
+            background: #fff8f8;
+            border-left: 3px solid #d32f2f;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <!-- 操作按钮（非打印元素） -->
+    <div class="btn-group no-print">
+        <button class="refresh-btn" onclick="loadSelectedData()">选择并加载数据</button>
+        <button class="print-btn" onclick="printDocument()">打印选中数据</button>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="tip no-print">
+        操作说明：1. 点击「选择并加载数据」唤起记录选择对话框；2. 在对话框中选择要打印的记录并确认；3. 确认无误后点击「打印选中数据」
+    </div>
+    <div id="errorTip" class="tip error-tip no-print" style="display: none;"></div>
+
+    <!-- 单据内容 -->
+    <div class="invoice-container">
+        <div class="title">河南省飞马起重机械集团有限公司销售明细表</div>
+
+        <div class="base-info">
+            <div class="info-item">
+                <span class="info-label">发票号：</span>
+                <span class="info-value" id="invoiceNo"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发货日期：</span>
+                <span class="info-value" id="shipDate"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">销售经理：</span>
+                <span class="info-value" id="salesManager"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">审核人员：</span>
+                <span class="info-value" id="checker"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发货人：</span>
+                <span class="info-value" id="shipper"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">收款方式：</span>
+                <span class="info-value" id="paymentMethod"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">客户名称：</span>
+                <span class="info-value" id="customerName"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">客户电话：</span>
+                <span class="info-value" id="customerPhone"></span>
+            </div>
+        </div>
+
+        <table class="detail-table">
+            <thead>
+                <tr>
+                    <th>物料编码</th>
+                    <th>物料名称</th>
+                    <th>规格型号</th>
+                    <th>单位</th>
+                    <th>数量</th>
+                    <th>单价（元）</th>
+                    <th>金额（元）</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody id="detailTableBody">
+                <tr>
+                    <td colspan="8" style="text-align: center; color: #666;">点击「选择并加载数据」唤起对话框选择记录</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="total-area">
+            <div>
+                金额合计：<span class="total-amount" id="totalAmount">¥0.00</span>
+            </div>
+            <div class="amount-capital">
+                大写金额：<span id="capitalAmount">零元整</span>
+            </div>
+            <div id="taxRemark" style="margin-top: 4px; font-size: 12px;"></div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-left">
+                打印时间：<span id="printTime"></span><br>
+                单据联次：共4联（留存/客户/记账/会计）
+            </div>
+            <div class="footer-right">
+                第 <span id="pageNum">1</span> 页 / 共 <span id="totalPage">1</span> 页
+            </div>
+        </div>
+    </div>
+
+   <script>
     // ==================== 辅助函数 ====================
     
     // 金额大写转换工具
@@ -496,3 +792,5 @@
         }
     };
 </script>
+</body>
+</html>
