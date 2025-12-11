@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>销售明细表 - 飞书多选打印版（241mm×279.4mm）</title>
     <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
-   <script src="lark-sdk.umd.js" defer></script>
+    <script src="lark-sdk.umd.js" defer></script>
     <style>
         /* 基础样式：适配241mm×279.4mm多联打印纸 */
         * {
@@ -221,35 +221,35 @@
         <div class="base-info">
             <div class="info-item">
                 <span class="info-label">发票号：</span>
-                <span class="info-value" id="invoiceNo" contenteditable="true">2511054292</span>
+                <span class="info-value" id="invoiceNo"></span>
             </div>
             <div class="info-item">
                 <span class="info-label">发货日期：</span>
-                <span class="info-value" id="shipDate" contenteditable="true">2025年11月28日</span>
+                <span class="info-value" id="shipDate"></span>
             </div>
             <div class="info-item">
                 <span class="info-label">销售经理：</span>
-                <span class="info-value" id="salesManager" contenteditable="true">韩瑞鹏</span>
+                <span class="info-value" id="salesManager"></span>
             </div>
             <div class="info-item">
                 <span class="info-label">审核人员：</span>
-                <span class="info-value" id="checker" contenteditable="true">韩瑞鹏</span>
+                <span class="info-value" id="checker"></span>
             </div>
             <div class="info-item">
                 <span class="info-label">发货人：</span>
-                <span class="info-value" id="shipper" contenteditable="true">韩烁星（15670503456）</span>
+                <span class="info-value" id="shipper"></span>
             </div>
             <div class="info-item">
                 <span class="info-label">收款方式：</span>
-                <span class="info-value" id="paymentMethod" contenteditable="true">单</span>
+                <span class="info-value" id="paymentMethod"></span>
             </div>
             <div class="info-item">
                 <span class="info-label">客户名称：</span>
-                <span class="info-value" id="customerName" contenteditable="true">中原公司靳庆余</span>
+                <span class="info-value" id="customerName"></span>
             </div>
             <div class="info-item">
                 <span class="info-label">客户电话：</span>
-                <span class="info-value" id="customerPhone" contenteditable="true">18603739577</span>
+                <span class="info-value" id="customerPhone"></span>
             </div>
         </div>
 
@@ -275,18 +275,17 @@
 
         <div class="total-area">
             <div>
-                数量合计：<span id="totalQuantity">0.00</span> 吨&nbsp;&nbsp;&nbsp;&nbsp;
                 金额合计：<span class="total-amount" id="totalAmount">¥0.00</span>
             </div>
             <div class="amount-capital">
                 大写金额：<span id="capitalAmount">零元整</span>
             </div>
-            <div style="margin-top: 4px; font-size: 12px;">说明：此金额为含税价</div>
+            <div id="taxRemark" style="margin-top: 4px; font-size: 12px;"></div>
         </div>
 
         <div class="footer">
             <div class="footer-left">
-                打印时间：<span id="printTime">2025年11月28日 09:47</span><br>
+                打印时间：<span id="printTime"></span><br>
                 单据联次：共4联（留存/客户/记账/会计）
             </div>
             <div class="footer-right">
@@ -296,25 +295,21 @@
     </div>
 
     <script>
-        // ========================= 核心配置：飞书表格字段映射 =========================
-        // ！！！必须替换为你的表格实际字段ID（获取方式：飞书表格→字段设置→复制字段ID）
-        const FIELD_MAPPING = {
-            materialCode: "fld6mvGmkP", // 物料编码字段ID
-            materialName: "fldTRySYAT", // 物料名称字段ID
-            specification: "fld6mvGmkP", // 规格型号字段ID
-            unit: "fld6mvGmkP", // 单位字段ID
-            quantity: "fld6mvGmkP", // 数量字段ID
-            unitPrice: "fld6mvGmkP", // 单价字段ID
-            amount: "fld6mvGmkP", // 金额字段ID（可选）
-            remark: "fld6mvGmkP" // 备注字段ID（可选）
-        };
-        // ===========================================================================
-
+        // ==================== 辅助函数 ====================
+        
         // 金额大写转换工具
         function convertToCapital(amount) {
             const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
             const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿'];
             const decimals = ['角', '分'];
+            
+            // 处理负数
+            let isNegative = false;
+            if (amount < 0) {
+                isNegative = true;
+                amount = Math.abs(amount);
+            }
+            
             let integerPart = Math.floor(amount);
             let decimalPart = Math.round((amount - integerPart) * 100);
             
@@ -348,9 +343,68 @@
                     capital += digits[decimalPart % 10] + decimals[1];
                 }
             }
-            return capital;
+            
+            return (isNegative ? '负' : '') + capital;
         }
 
+        // 时间戳转日期格式（处理毫秒时间戳）
+        function timestampToDate(timestamp) {
+            if (!timestamp) return '';
+            
+            // 如果是毫秒时间戳，转换为秒
+            if (timestamp > 1000000000000) {
+                timestamp = Math.floor(timestamp / 1000);
+            }
+            
+            const date = new Date(timestamp * 1000);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            
+            return `${year}年${month}月${day}日`;
+        }
+
+        // 获取字段值的辅助函数（处理多层嵌套）
+        function getFieldValue(fields, fieldPath) {
+            if (!fields) return '';
+            
+            const parts = fieldPath.split('.');
+            let value = fields;
+            
+            for (const part of parts) {
+                // 处理数组索引，如 fldXDRjMOt[0]
+                const arrayMatch = part.match(/(\w+)\[(\d+)\]/);
+                if (arrayMatch && Array.isArray(value)) {
+                    const arrayName = arrayMatch[1];
+                    const index = parseInt(arrayMatch[2]);
+                    
+                    if (value[arrayName] && Array.isArray(value[arrayName]) && value[arrayName][index]) {
+                        value = value[arrayName][index];
+                    } else if (Array.isArray(value) && value[index]) {
+                        value = value[index];
+                    } else {
+                        return '';
+                    }
+                } else if (value && typeof value === 'object' && part in value) {
+                    value = value[part];
+                } else {
+                    return '';
+                }
+            }
+            
+            return value || '';
+        }
+
+        // 更新打印时间
+        function updatePrintTime() {
+            const now = new Date();
+            const formatTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            document.getElementById('printTime').textContent = formatTime;
+            return formatTime;
+        }
+
+        // ==================== 核心函数 ====================
+        
         // 核心改造：通过selectRecordIdList唤起选择对话框获取记录ID并加载数据
         async function loadSelectedData() {
             const errorTip = document.getElementById('errorTip');
@@ -374,7 +428,6 @@
 
                 // ========== 步骤3：获取tableId和viewId ==========
                 console.log('【步骤3】获取当前活跃表格的tableId和viewId');
-                // 获取选中信息（提取tableId和viewId）
                 const selection = await base.getSelection();
                 console.log('原始selection数据：', selection);
                 
@@ -395,7 +448,6 @@
 
                 // ========== 步骤4：调用selectRecordIdList唤起选择对话框 ==========
                 console.log('【步骤4】调用bitable.ui.selectRecordIdList唤起记录选择对话框');
-                // 核心API：唤起选择对话框，返回选中的recordId列表
                 const selectedRecordIds = await window.bitable.ui.selectRecordIdList(tableId, viewId);
                 console.log('✅ 选择对话框返回的recordId列表：', selectedRecordIds);
 
@@ -413,121 +465,114 @@
                 }
                 console.log('✅ 表格实例获取成功：', table);
 
-               // ========== 步骤6：获取表格所有记录（适配recordList格式） ==========
-console.log('【步骤6】获取表格所有记录');
-let allRecords = await table.getRecordList();
-// 打印原始返回值，确认结构
-console.log('原始getRecordList返回值：', allRecords, '类型：', typeof allRecords, '是否数组：', Array.isArray(allRecords));
+                // ========== 步骤6：获取表格所有记录（适配recordList格式） ==========
+                console.log('【步骤6】获取表格所有记录');
+                let allRecords = await table.getRecordList();
+                console.log('原始getRecordList返回值：', allRecords, '类型：', typeof allRecords, '是否数组：', Array.isArray(allRecords));
 
-// 关键调整：优先提取recordList（根据你的日志结构）
-if (!Array.isArray(allRecords)) {
-    // 1. 优先适配你的日志格式：{ recordList: [...] }
-    if (allRecords?.recordList && Array.isArray(allRecords.recordList)) {
-        allRecords = allRecords.recordList;
-    }
-    // 2. 兼容其他常见格式（保留之前的兼容逻辑）
-    else if (allRecords?.records && Array.isArray(allRecords.records)) {
-        allRecords = allRecords.records;
-    } else if (allRecords?.data && Array.isArray(allRecords.data)) {
-        allRecords = allRecords.data;
-    }
-    // 3. 无法识别则置为空数组
-    else {
-        allRecords = [];
-    }
-    console.log('转换后的allRecords数组（从recordList提取）：', allRecords, '长度：', allRecords.length);
-}
+                // 关键调整：优先提取recordList
+                if (!Array.isArray(allRecords)) {
+                    if (allRecords?.recordList && Array.isArray(allRecords.recordList)) {
+                        allRecords = allRecords.recordList;
+                    }
+                    else if (allRecords?.records && Array.isArray(allRecords.records)) {
+                        allRecords = allRecords.records;
+                    } else if (allRecords?.data && Array.isArray(allRecords.data)) {
+                        allRecords = allRecords.data;
+                    }
+                    else {
+                        allRecords = [];
+                    }
+                    console.log('转换后的allRecords数组：', allRecords, '长度：', allRecords.length);
+                }
 
-// 验证转换结果
-if (allRecords.length === 0) {
-    console.warn('⚠️ 警告：表格记录数组为空');
-} else {
-    console.log(`✅ 成功提取记录数组，共 ${allRecords.length} 条记录`);
-}
+                if (allRecords.length === 0) {
+                    console.warn('⚠️ 警告：表格记录数组为空');
+                } else {
+                    console.log(`✅ 成功提取记录数组，共 ${allRecords.length} 条记录`);
+                }
 
                 // ========== 步骤7：筛选选中的记录（根据recordId列表） ==========
-console.log('【步骤7】筛选选中的记录（根据recordId列表）');
-// 1. 先打印一条记录的结构，确认id字段名称（关键调试）
-if (allRecords.length > 0) {
-    console.log('第一条记录的完整结构：', allRecords[0]); 
-    // 观察日志中id的属性名，比如：可能是recordId / id / _id 等
-}
-
-// 2. 验证selectedRecordIds是否为数组
-if (!Array.isArray(selectedRecordIds)) {
-    throw new Error(`选中的recordId列表格式异常，不是数组：${JSON.stringify(selectedRecordIds)}`);
-}
-if (!Array.isArray(allRecords)) {
-    throw new Error('表格记录不是数组，无法筛选：' + typeof allRecords);
-}
-
-// 3. 修正筛选条件：根据实际id字段名称调整（这里假设是recordId，需根据日志修改）
-// ！！！关键：把record.id改为记录真实的id字段名（如record.recordId）
-const selectedRecords = allRecords.filter(record => {
-    // 打印当前记录的id值，观察是否与selectedRecordIds匹配
-    const recordId = record.recordId; // 假设id字段是recordId，需根据实际日志修改
-    console.log('当前记录的id：', recordId, '选中的id列表：', selectedRecordIds);
-    
-    // 额外校验recordId是否存在
-    if (!recordId) {
-        console.warn('⚠️ 跳过无id的异常记录：', record);
-        return false;
-    }
-    // 检查是否包含在选中列表中
-    return selectedRecordIds.includes(recordId);
-});
-
-console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条：`, selectedRecords);
-
-                // ========== 步骤8：验证字段映射配置 ==========
-                console.log('【步骤8】验证字段映射配置');
-                const requiredFields = ['materialCode', 'materialName', 'specification', 'quantity', 'unitPrice'];
-                const missingFields = requiredFields.filter(key => 
-                    !FIELD_MAPPING[key] || FIELD_MAPPING[key].includes('xxxx')
-                );
-                if (missingFields.length > 0) {
-                    throw new Error(`请配置飞书表格字段映射：${missingFields.join('、')}（修改代码中FIELD_MAPPING配置）`);
+                console.log('【步骤7】筛选选中的记录（根据recordId列表）');
+                // 打印第一条记录的结构，确认fields字段
+                if (allRecords.length > 0) {
+                    console.log('第一条记录的结构（重点看fields）：', allRecords[0]);
+                    console.log('fields字段内容：', allRecords[0].fields);
                 }
-                console.log('✅ 字段映射配置验证通过');
 
-                // ========== 步骤9：处理数据并渲染表格 ==========
-                console.log('【步骤9】处理选中记录数据并渲染表格');
-                let totalQuantity = 0;
+                // 修正筛选条件：使用recordId字段（根据实际情况调整）
+                const selectedRecords = allRecords.filter(record => {
+                    const recordId = record.recordId || record.id || record._id;
+                    console.log('当前记录的id：', recordId, '选中的id列表：', selectedRecordIds);
+                    
+                    if (!recordId) {
+                        console.warn('⚠️ 跳过无id的异常记录：', record);
+                        return false;
+                    }
+                    return selectedRecordIds.includes(recordId);
+                });
+
+                console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条`);
+
+                if (selectedRecords.length === 0) {
+                    throw new Error('未找到匹配的记录，请检查字段映射');
+                }
+
+                // ========== 步骤8：处理数据并渲染 ==========
+                console.log('【步骤8】处理数据并渲染');
                 let totalAmount = 0;
                 let tableHtml = '';
+                let taxRemark = '';
 
-                // 辅助函数：通过字段ID获取单元格值
-                const getCellValue = async (record, fieldId) => {
-                    try {
-                        const cell = await record.getCellByField(fieldId);
-                        const value = cell ? await cell.getValue() : '';
-                        console.log(`获取字段[${fieldId}]值：`, value);
-                        return value;
-                    } catch (e) {
-                        console.warn(`获取字段${fieldId}值失败：`, e);
-                        return '';
-                    }
-                };
+                // 清空不需要展示的字段
+                document.getElementById('checker').textContent = '';
+                document.getElementById('shipper').textContent = '';
+                document.getElementById('paymentMethod').textContent = '';
+                document.getElementById('customerPhone').textContent = '';
 
                 // 遍历选中记录
                 for (let i = 0; i < selectedRecords.length; i++) {
                     const record = selectedRecords[i];
-                    console.log(`处理第 ${i+1} 条记录（ID：${record.id}）`);
+                    const fields = record.fields || {};
+                    console.log(`处理第 ${i+1} 条记录，fields：`, fields);
 
-                    // 提取各字段值
-                    const materialCode = await getCellValue(record, FIELD_MAPPING.materialCode) || '';
-                    const materialName = await getCellValue(record, FIELD_MAPPING.materialName) || '';
-                    const specification = await getCellValue(record, FIELD_MAPPING.specification) || '';
-                    const unit = await getCellValue(record, FIELD_MAPPING.unit) || '吨';
-                    const quantity = parseFloat(await getCellValue(record, FIELD_MAPPING.quantity)) || 0;
-                    const unitPrice = parseFloat(await getCellValue(record, FIELD_MAPPING.unitPrice)) || 0;
-                    // 修复原BUG：金额优先从字段获取，无则计算
-                    const amountFieldValue = await getCellValue(record, FIELD_MAPPING.amount);
-                    const amount = amountFieldValue ? parseFloat(amountFieldValue) : (quantity * unitPrice);
-                    const remark = await getCellValue(record, FIELD_MAPPING.remark) || '';
+                    // 如果是第一条记录，提取去重展示的字段
+                    if (i === 0) {
+                        // 发票号：fldFRpsxIn.text
+                        const invoiceNo = getFieldValue(fields, 'fldFRpsxIn.text') || '';
+                        document.getElementById('invoiceNo').textContent = invoiceNo;
+                        
+                        // 发货日期：fldXDRjMOt[0]（时间戳转日期）
+                        const timestamp = getFieldValue(fields, 'fldXDRjMOt[0]');
+                        const shipDate = timestampToDate(timestamp);
+                        document.getElementById('shipDate').textContent = shipDate;
+                        
+                        // 销售经理：fldD0DvgRD[0].text
+                        const salesManager = getFieldValue(fields, 'fldD0DvgRD[0].text') || '';
+                        document.getElementById('salesManager').textContent = salesManager;
+                        
+                        // 客户名称：fldfsZTsu9[0].text
+                        const customerName = getFieldValue(fields, 'fldfsZTsu9[0].text') || '';
+                        document.getElementById('customerName').textContent = customerName;
+                        
+                        // 含税说明：fldzNp2Gpg[0].text
+                        const taxType = getFieldValue(fields, 'fldzNp2Gpg[0].text') || '';
+                        if (taxType === '含税') {
+                            taxRemark = '说明：此金额为含税价';
+                        }
+                    }
 
-                    // 累加合计
-                    totalQuantity += quantity;
+                    // 提取表格行字段
+                    const materialCode = getFieldValue(fields, 'fldYsLLAyK.text') || '';
+                    const materialName = getFieldValue(fields, 'fldZRE1MMR[0].text') || '';
+                    const specification = getFieldValue(fields, 'fldTRySYAT[0].text') || '';
+                    const unit = getFieldValue(fields, 'fldNQg0P9l[0].text') || '';
+                    const quantity = parseFloat(getFieldValue(fields, 'fldLgfZ4zt')) || 0;
+                    const unitPrice = parseFloat(getFieldValue(fields, 'fldIeO9wYh')) || 0;
+                    const amount = parseFloat(getFieldValue(fields, 'fldPnhczuU')) || 0;
+                    const remark = getFieldValue(fields, 'fldQSFfBoE') || '';
+
+                    // 累加合计金额
                     totalAmount += amount;
 
                     // 生成表格行HTML
@@ -545,19 +590,23 @@ console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条：
                     `;
                 }
 
-                // ========== 步骤10：更新页面显示 ==========
-                console.log('【步骤10】更新表格和合计信息');
+                // ========== 步骤9：更新页面显示 ==========
+                console.log('【步骤9】更新页面显示');
                 // 更新表格内容
                 tableBody.innerHTML = tableHtml;
+                
                 // 更新合计数据
-                document.getElementById('totalQuantity').textContent = totalQuantity.toFixed(2);
                 document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
-                // 更新大写金额
                 document.getElementById('capitalAmount').textContent = convertToCapital(totalAmount);
+                document.getElementById('taxRemark').textContent = taxRemark;
+                
+                // 更新打印时间
+                updatePrintTime();
+                
                 // 隐藏错误提示
                 errorTip.style.display = 'none';
 
-                console.log('✅ 所有数据加载完成，合计数量：', totalQuantity, '合计金额：', totalAmount);
+                console.log('✅ 所有数据加载完成，合计金额：', totalAmount);
 
             } catch (err) {
                 // 异常处理：显示错误提示 + 控制台打印
@@ -583,6 +632,9 @@ console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条：
                 return;
             }
 
+            // 更新打印时间
+            updatePrintTime();
+
             // 飞书环境优先使用飞书打印API
             if (window.bitable && window.bitable.base) {
                 try {
@@ -604,14 +656,17 @@ console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条：
             }
         }
 
-        // 初始化：更新打印时间 + 检查飞书环境
+        // 初始化：更新打印时间
         window.onload = function() {
             console.log('【初始化】页面加载完成，执行初始化操作');
-            // 更新当前打印时间
-            const now = new Date();
-            const formatTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            document.getElementById('printTime').textContent = formatTime;
-            console.log(`✅ 打印时间已更新为：${formatTime}`);
+            updatePrintTime();
+            
+            // 清空初始显示内容
+            document.getElementById('checker').textContent = '';
+            document.getElementById('shipper').textContent = '';
+            document.getElementById('paymentMethod').textContent = '';
+            document.getElementById('customerPhone').textContent = '';
+            document.getElementById('taxRemark').textContent = '';
 
             // 检查飞书环境
             if (window.bitable && window.bitable.base) {
