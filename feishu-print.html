@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>销售明细表 - 飞书多选打印版（241mm×279.4mm）</title>
+    <title>销售明细表 - 飞书多选打印版（240mm×140mm）</title>
     <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
     <script src="lark-sdk.umd.js" defer></script>
     <style>
-        /* 基础样式：适配241mm×279.4mm多联打印纸 */
+        /* 基础样式：适配240mm×140mm打印纸 */
         * {
             margin: 0;
             padding: 0;
@@ -15,12 +15,12 @@
             font-family: "仿宋", "SimSun", serif;
         }
         body {
-            width: 241mm;
-            padding: 8mm 10mm;
+            width: 240mm; /* 改为240mm */
+            padding: 5mm 10mm; /* 减小上下内边距以适应更短的高度 */
             margin: 0 auto;
             background: #fff;
-            font-size: 13px;
-            line-height: 1.4;
+            font-size: 12px; /* 稍微减小字体大小以在更小的空间显示更多内容 */
+            line-height: 1.3; /* 减小行高 */
         }
 
         /* 打印专用样式优化 */
@@ -32,8 +32,8 @@
                 height: auto;
             }
             @page {
-                size: 241mm 279.4mm;
-                margin: 8mm 10mm;
+                size: 240mm 140mm; /* 改为240mm×140mm */
+                margin: 5mm 10mm; /* 相应减小页边距 */
                 orphans: 2;
                 widows: 2;
                 @top-center: none;
@@ -54,9 +54,9 @@
         /* 单据标题 */
         .title {
             text-align: center;
-            font-size: 18px;
+            font-size: 16px; /* 减小标题字体 */
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px; /* 减小下边距 */
             letter-spacing: 1px;
         }
 
@@ -64,10 +64,10 @@
         .base-info {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 8px 15px;
-            margin-bottom: 10px;
+            gap: 6px 12px; /* 减小间距 */
+            margin-bottom: 8px; /* 减小下边距 */
             border-bottom: 1px solid #000;
-            padding-bottom: 8px;
+            padding-bottom: 6px; /* 减小内边距 */
         }
         .info-item {
             display: flex;
@@ -77,30 +77,32 @@
             text-overflow: ellipsis;
         }
         .info-label {
-            width: 75px;
+            width: 70px; /* 稍微减小宽度 */
             font-weight: 600;
             flex-shrink: 0;
+            font-size: 11px; /* 减小字体 */
         }
         .info-value {
             flex: 1;
             border-bottom: 1px dashed #333;
             padding: 1px 0;
-            min-height: 18px;
+            min-height: 16px; /* 减小最小高度 */
+            font-size: 11px; /* 减小字体 */
         }
 
         /* 商品明细表格 */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0;
+            margin: 8px 0; /* 减小边距 */
             table-layout: fixed;
         }
         .detail-table th, .detail-table td {
             border: 1px solid #000;
-            padding: 6px 3px;
+            padding: 4px 2px; /* 减小内边距 */
             text-align: center;
             vertical-align: middle;
-            font-size: 12px;
+            font-size: 11px; /* 减小字体 */
             word-break: break-all;
         }
         .detail-table th {
@@ -117,30 +119,31 @@
         .detail-table th:nth-child(8), td:nth-child(8) { width: 20%; }
         .detail-table .remark {
             text-align: left;
-            padding-left: 5px;
+            padding-left: 3px; /* 减小内边距 */
         }
 
         /* 合计区域 */
         .total-area {
-            margin: 10px 0;
+            margin: 8px 0; /* 减小边距 */
             text-align: right;
-            font-size: 14px;
+            font-size: 12px; /* 减小字体 */
         }
         .total-amount {
-            font-size: 15px;
+            font-size: 13px; /* 减小字体 */
             font-weight: bold;
             color: #000;
             margin-left: 8px;
         }
         .amount-capital {
-            margin-top: 4px;
+            margin-top: 3px; /* 减小上边距 */
             font-weight: 600;
+            font-size: 11px; /* 减小字体 */
         }
 
         /* 底部信息 */
         .footer {
-            margin-top: 15px;
-            font-size: 12px;
+            margin-top: 12px; /* 减小上边距 */
+            font-size: 11px; /* 减小字体 */
             color: #333;
             display: flex;
             justify-content: space-between;
@@ -272,7 +275,7 @@
             <div class="amount-capital">
                 大写金额：<span id="capitalAmount">零元整</span>
             </div>
-            <div id="taxRemark" style="margin-top: 4px; font-size: 12px;"></div>
+            <div id="taxRemark" style="margin-top: 3px; font-size: 11px;"></div>
         </div>
 
         <div class="footer">
