@@ -11,16 +11,16 @@
         * {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            box-sizing: border-box !important;
             font-family: "仿宋", "SimSun", serif;
         }
         body {
-            width: 240mm; /* 改为240mm */
-            padding: 5mm 10mm; /* 减小上下内边距以适应更短的高度 */
+            width: 240mm;
+            padding: 5mm 8mm; /* 减小左右内边距，为内容留出更多空间 */
             margin: 0 auto;
             background: #fff;
-            font-size: 12px; /* 稍微减小字体大小以在更小的空间显示更多内容 */
-            line-height: 1.3; /* 减小行高 */
+            font-size: 12px;
+            line-height: 1.3;
         }
 
         /* 打印专用样式优化 */
@@ -32,8 +32,8 @@
                 height: auto;
             }
             @page {
-                size: 240mm 140mm; /* 改为240mm×140mm */
-                margin: 5mm 10mm; /* 相应减小页边距 */
+                size: 240mm 140mm;
+                margin: 5mm 8mm; /* 同步减小页边距 */
                 orphans: 2;
                 widows: 2;
                 @top-center: none;
@@ -49,14 +49,20 @@
                 border-color: #000 !important;
                 border-width: 0.8px !important;
             }
+            /* 打印时强制内容不超出 */
+            body, .invoice-container, .detail-table {
+                overflow: visible !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
         }
 
         /* 单据标题 */
         .title {
             text-align: center;
-            font-size: 16px; /* 减小标题字体 */
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: 8px; /* 减小下边距 */
+            margin-bottom: 8px;
             letter-spacing: 1px;
         }
 
@@ -64,10 +70,10 @@
         .base-info {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 6px 12px; /* 减小间距 */
-            margin-bottom: 8px; /* 减小下边距 */
+            gap: 6px 12px;
+            margin-bottom: 8px;
             border-bottom: 1px solid #000;
-            padding-bottom: 6px; /* 减小内边距 */
+            padding-bottom: 6px;
         }
         .info-item {
             display: flex;
@@ -77,73 +83,79 @@
             text-overflow: ellipsis;
         }
         .info-label {
-            width: 70px; /* 稍微减小宽度 */
+            width: 70px;
             font-weight: 600;
             flex-shrink: 0;
-            font-size: 11px; /* 减小字体 */
+            font-size: 11px;
         }
         .info-value {
             flex: 1;
             border-bottom: 1px dashed #333;
             padding: 1px 0;
-            min-height: 16px; /* 减小最小高度 */
-            font-size: 11px; /* 减小字体 */
+            min-height: 16px;
+            font-size: 11px;
         }
 
-        /* 商品明细表格 */
+        /* 商品明细表格 - 去掉物料编号列，调整为7列 */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 8px 0; /* 减小边距 */
+            margin: 8px 0;
             table-layout: fixed;
         }
         .detail-table th, .detail-table td {
             border: 1px solid #000;
-            padding: 4px 2px; /* 减小内边距 */
+            padding: 4px 2px;
             text-align: center;
             vertical-align: middle;
-            font-size: 11px; /* 减小字体 */
-            word-break: break-all;
+            font-size: 11px;
+            word-break: break-word;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         .detail-table th {
             font-weight: bold;
         }
-        /* 表格列宽分配 */
-        .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; }
-        .detail-table th:nth-child(2), td:nth-child(2) { width: 12%; }
-        .detail-table th:nth-child(3), td:nth-child(3) { width: 18%; }
-        .detail-table th:nth-child(4), td:nth-child(4) { width: 6%; }
-        .detail-table th:nth-child(5), td:nth-child(5) { width: 8%; }
-        .detail-table th:nth-child(6), td:nth-child(6) { width: 12%; }
-        .detail-table th:nth-child(7), td:nth-child(7) { width: 12%; }
-        .detail-table th:nth-child(8), td:nth-child(8) { width: 20%; }
+        /* 表格列宽分配 - 7列布局 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 16%; } /* 物料名称 */
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 22%; } /* 规格型号 */
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 单位 */
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 10%; } /* 数量 */
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 13%; } /* 单价 */
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 13%; } /* 金额 */
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 18%; } /* 备注 */
         .detail-table .remark {
             text-align: left;
-            padding-left: 3px; /* 减小内边距 */
+            padding-left: 3px;
+        }
+        /* 针对规格型号列的特殊处理 */
+        .detail-table td:nth-child(2) {
+            font-size: 10px;
+            line-height: 1.2;
         }
 
         /* 合计区域 */
         .total-area {
-            margin: 8px 0; /* 减小边距 */
+            margin: 8px 0;
             text-align: right;
-            font-size: 12px; /* 减小字体 */
+            font-size: 12px;
         }
         .total-amount {
-            font-size: 13px; /* 减小字体 */
+            font-size: 13px;
             font-weight: bold;
             color: #000;
             margin-left: 8px;
         }
         .amount-capital {
-            margin-top: 3px; /* 减小上边距 */
+            margin-top: 3px;
             font-weight: 600;
-            font-size: 11px; /* 减小字体 */
+            font-size: 11px;
         }
 
         /* 底部信息 */
         .footer {
-            margin-top: 12px; /* 减小上边距 */
-            font-size: 11px; /* 减小字体 */
+            margin-top: 12px;
+            font-size: 11px;
             color: #333;
             display: flex;
             justify-content: space-between;
@@ -251,7 +263,7 @@
         <table class="detail-table">
             <thead>
                 <tr>
-                    <th>物料编码</th>
+                    <!-- 去掉物料编码列，调整为7列 -->
                     <th>物料名称</th>
                     <th>规格型号</th>
                     <th>单位</th>
@@ -263,7 +275,7 @@
             </thead>
             <tbody id="detailTableBody">
                 <tr>
-                    <td colspan="8" style="text-align: center; color: #666;">点击「选择并加载数据」唤起对话框选择记录</td>
+                    <td colspan="7" style="text-align: center; color: #666;">点击「选择并加载数据」唤起对话框选择记录</td>
                 </tr>
             </tbody>
         </table>
@@ -663,18 +675,18 @@
                     }
                 }
 
-                // 提取表格行字段
-                console.log('=== 提取表格行字段 ===');
+                // 提取表格行字段（去掉物料编码）
+                console.log('=== 提取表格行字段（7列） ===');
                 
-                const materialCode = extractField(fields, 'fldYsLLAyK') || '';
-                console.log('物料编码:', materialCode);
-                
+                // 物料名称：fldZRE1MMR
                 const materialName = extractField(fields, 'fldZRE1MMR') || '';
                 console.log('物料名称:', materialName);
                 
+                // 规格型号：fldTRySYAT
                 const specification = extractField(fields, 'fldTRySYAT') || '';
                 console.log('规格型号:', specification);
                 
+                // 单位：fldNQg0P9l
                 const unit = extractField(fields, 'fldNQg0P9l') || '';
                 console.log('单位:', unit);
                 
@@ -694,10 +706,9 @@
                 // 累加合计金额
                 totalAmount += amount;
 
-                // 生成表格行HTML
+                // 生成表格行HTML（7列）
                 tableHtml += `
                     <tr>
-                        <td>${materialCode}</td>
                         <td>${materialName}</td>
                         <td>${specification}</td>
                         <td>${unit}</td>
@@ -732,7 +743,7 @@
             console.error('❌ 加载数据失败：', err);
             errorTip.textContent = `错误：${err.message}`;
             errorTip.style.display = 'block';
-            tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
         }
     }
 
@@ -743,7 +754,7 @@
 
         console.log('【打印功能】触发打印操作');
         // 检查是否有有效数据
-        if (tableBody.querySelector('td[colspan="8"]') || tableBody.children.length === 0) {
+        if (tableBody.querySelector('td[colspan="7"]') || tableBody.children.length === 0) {
             const errMsg = '无有效打印数据，请先选择并加载数据';
             console.error('❌ 打印失败：', errMsg);
             errorTip.textContent = `错误：${errMsg}`;
