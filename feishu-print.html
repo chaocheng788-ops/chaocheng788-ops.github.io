@@ -15,12 +15,12 @@
             font-family: "仿宋", "SimSun", serif;
         }
         body {
-            width: 241mm; /* 改为241mm宽 */
-            padding: 4mm 6mm; /* 进一步减小内边距，为内容留出更多空间 */
+            width: 241mm;
+            padding: 3mm 4mm; /* 大幅减小内边距 */
             margin: 0 auto;
             background: #fff;
-            font-size: 11px; /* 进一步减小基础字体 */
-            line-height: 1.2; /* 减小行高 */
+            font-size: 9px; /* 大幅减小基础字体 */
+            line-height: 1.1; /* 减小行高 */
         }
 
         /* 打印专用样式优化 */
@@ -32,8 +32,8 @@
                 height: auto;
             }
             @page {
-                size: 241mm 140mm; /* 改为241mm×140mm */
-                margin: 4mm 6mm; /* 同步减小页边距 */
+                size: 241mm 140mm;
+                margin: 3mm 4mm; /* 大幅减小页边距 */
                 orphans: 2;
                 widows: 2;
                 @top-center: none;
@@ -47,7 +47,7 @@
             }
             th, td {
                 border-color: #000 !important;
-                border-width: 0.8px !important;
+                border-width: 0.6px !important; /* 减小边框宽度 */
             }
             /* 打印时强制内容不超出 */
             body, .invoice-container, .detail-table {
@@ -60,20 +60,20 @@
         /* 单据标题 */
         .title {
             text-align: center;
-            font-size: 15px; /* 减小标题字体 */
+            font-size: 12px; /* 大幅减小标题字体 */
             font-weight: bold;
-            margin-bottom: 6px; /* 减小下边距 */
+            margin-bottom: 4px; /* 减小下边距 */
             letter-spacing: 0.5px;
         }
 
-        /* 基础信息区域 */
+        /* 基础信息区域 - 改为两行三列布局，更加紧凑 */
         .base-info {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 5px 10px; /* 减小间距 */
-            margin-bottom: 6px; /* 减小下边距 */
+            grid-template-columns: repeat(3, 1fr); /* 改为三列 */
+            gap: 3px 8px; /* 大幅减小间距 */
+            margin-bottom: 4px; /* 减小下边距 */
             border-bottom: 1px solid #000;
-            padding-bottom: 5px; /* 减小内边距 */
+            padding-bottom: 3px; /* 减小内边距 */
         }
         .info-item {
             display: flex;
@@ -81,90 +81,92 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            min-height: 10px; /* 减小最小高度 */
         }
         .info-label {
-            width: 65px; /* 减小宽度 */
+            width: 50px; /* 大幅减小宽度 */
             font-weight: 600;
             flex-shrink: 0;
-            font-size: 10px; /* 减小字体 */
+            font-size: 8px; /* 减小字体 */
         }
         .info-value {
             flex: 1;
             border-bottom: 1px dashed #333;
             padding: 0;
-            min-height: 14px; /* 减小最小高度 */
-            font-size: 10px; /* 减小字体 */
+            min-height: 10px; /* 减小最小高度 */
+            font-size: 8px; /* 减小字体 */
         }
 
         /* 商品明细表格 - 去掉物料编号列，调整为7列 */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 6px 0; /* 减小边距 */
+            margin: 4px 0; /* 大幅减小边距 */
             table-layout: fixed;
         }
         .detail-table th, .detail-table td {
             border: 1px solid #000;
-            padding: 3px 1px; /* 进一步减小内边距 */
+            padding: 2px 1px; /* 大幅减小内边距 */
             text-align: center;
             vertical-align: middle;
-            font-size: 10px; /* 减小字体 */
+            font-size: 8px; /* 大幅减小字体 */
             word-break: break-word;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            line-height: 1.1; /* 减小行高 */
+            line-height: 1.0; /* 减小行高 */
         }
         .detail-table th {
             font-weight: bold;
-            padding: 3px 1px;
+            padding: 2px 1px;
         }
-        /* 表格列宽分配 - 7列布局，总和调整为95%以留出边框空间 */
-        .detail-table th:nth-child(1), td:nth-child(1) { width: 14%; } /* 物料名称 */
-        .detail-table th:nth-child(2), td:nth-child(2) { width: 20%; } /* 规格型号 */
-        .detail-table th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 单位 */
-        .detail-table th:nth-child(4), td:nth-child(4) { width: 10%; } /* 数量 */
-        .detail-table th:nth-child(5), td:nth-child(5) { width: 12%; } /* 单价 */
-        .detail-table th:nth-child(6), td:nth-child(6) { width: 12%; } /* 金额 */
-        .detail-table th:nth-child(7), td:nth-child(7) { width: 19%; } /* 备注 */
+        /* 表格列宽分配 - 7列布局，总和调整为90%以留出更多空间 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; } /* 物料名称 */
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 18%; } /* 规格型号 */
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 7%; }  /* 单位 */
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 9%; } /* 数量 */
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 11%; } /* 单价 */
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 11%; } /* 金额 */
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 22%; } /* 备注 */
         .detail-table .remark {
             text-align: left;
-            padding-left: 2px; /* 减小内边距 */
+            padding-left: 1px; /* 减小内边距 */
+            font-size: 7px; /* 备注字体更小 */
         }
         /* 针对规格型号列的特殊处理 */
         .detail-table td:nth-child(2) {
-            font-size: 9px; /* 进一步减小字体 */
-            line-height: 1.1;
+            font-size: 7px; /* 进一步减小字体 */
+            line-height: 1.0;
         }
         /* 数值列右对齐 */
         .detail-table td:nth-child(4),
         .detail-table td:nth-child(5),
         .detail-table td:nth-child(6) {
             text-align: right;
-            padding-right: 3px;
+            padding-right: 2px;
         }
 
         /* 合计区域 */
         .total-area {
-            margin: 6px 0; /* 减小边距 */
+            margin: 4px 0; /* 减小边距 */
             text-align: right;
-            font-size: 11px; /* 减小字体 */
+            font-size: 9px; /* 减小字体 */
         }
         .total-amount {
-            font-size: 12px; /* 减小字体 */
+            font-size: 10px; /* 减小字体 */
             font-weight: bold;
             color: #000;
-            margin-left: 6px;
+            margin-left: 4px;
         }
         .amount-capital {
-            margin-top: 2px; /* 减小上边距 */
+            margin-top: 1px; /* 减小上边距 */
             font-weight: 600;
-            font-size: 10px; /* 减小字体 */
+            font-size: 8px; /* 减小字体 */
         }
 
         /* 底部信息 */
         .footer {
-            margin-top: 10px; /* 减小上边距 */
-            font-size: 10px; /* 减小字体 */
+            margin-top: 6px; /* 减小上边距 */
+            font-size: 8px; /* 减小字体 */
             color: #333;
             display: flex;
             justify-content: space-between;
@@ -182,18 +184,18 @@
         /* 操作按钮 */
         .btn-group {
             position: fixed;
-            top: 10px;
-            right: 10px;
+            top: 8px;
+            right: 8px;
             z-index: 9999;
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
         .print-btn, .refresh-btn {
-            padding: 6px 12px;
+            padding: 4px 8px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 10px;
             color: #fff;
         }
         .print-btn {
@@ -211,16 +213,16 @@
 
         /* 提示信息 */
         .tip {
-            margin: 8px 0;
-            padding: 6px;
+            margin: 6px 0;
+            padding: 4px;
             background: #f5f5f5;
-            border-left: 3px solid #007fff;
-            font-size: 11px;
+            border-left: 2px solid #007fff;
+            font-size: 9px;
             color: #333;
         }
         .error-tip {
             background: #fff8f8;
-            border-left: 3px solid #d32f2f;
+            border-left: 2px solid #d32f2f;
             color: #d32f2f;
         }
         
@@ -231,6 +233,11 @@
             width: 241mm;
             height: 1px;
             background: red;
+        }
+        
+        /* 强制所有内容不换行 */
+        .no-wrap {
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -296,7 +303,7 @@
             </thead>
             <tbody id="detailTableBody">
                 <tr>
-                    <td colspan="7" style="text-align: center; color: #666;">点击「选择并加载数据」唤起对话框选择记录</td>
+                    <td colspan="7" style="text-align: center; color: #666; font-size: 8px;">点击「选择并加载数据」唤起对话框选择记录</td>
                 </tr>
             </tbody>
         </table>
@@ -308,7 +315,7 @@
             <div class="amount-capital">
                 大写金额：<span id="capitalAmount">零元整</span>
             </div>
-            <div id="taxRemark" style="margin-top: 2px; font-size: 10px;"></div>
+            <div id="taxRemark" style="margin-top: 1px; font-size: 8px;"></div>
         </div>
 
         <div class="footer">
