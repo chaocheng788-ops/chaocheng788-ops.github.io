@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>销售明细表 - 飞书多选打印版（241mm×140mm）</title>
+    <title>销售明细表 - 飞书多选打印版（241mm×200mm）</title>
     <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
     <script src="lark-sdk.umd.js" defer></script>
     <style>
-        /* 基础样式：适配241mm×140mm打印纸 */
+        /* 基础样式：适配241mm×200mm多联打印纸 */
         * {
             margin: 0;
             padding: 0;
-            box-sizing: border-box !important;
+            box-sizing: border-box;
             font-family: "仿宋", "SimSun", serif;
         }
         body {
             width: 241mm;
-            padding: 3mm 4mm; /* 大幅减小内边距 */
+            padding: 8mm 10mm;
             margin: 0 auto;
             background: #fff;
-            font-size: 9px; /* 大幅减小基础字体 */
-            line-height: 1.1; /* 减小行高 */
+            font-size: 13px;
+            line-height: 1.4;
         }
 
         /* 打印专用样式优化 */
@@ -32,8 +32,8 @@
                 height: auto;
             }
             @page {
-                size: 241mm 140mm;
-                margin: 3mm 4mm; /* 大幅减小页边距 */
+                size: 241mm 200mm; /* 高度改为200mm */
+                margin: 8mm 10mm;
                 orphans: 2;
                 widows: 2;
                 @top-center: none;
@@ -47,33 +47,27 @@
             }
             th, td {
                 border-color: #000 !important;
-                border-width: 0.6px !important; /* 减小边框宽度 */
-            }
-            /* 打印时强制内容不超出 */
-            body, .invoice-container, .detail-table {
-                overflow: visible !important;
-                width: 100% !important;
-                max-width: 100% !important;
+                border-width: 0.8px !important;
             }
         }
 
         /* 单据标题 */
         .title {
             text-align: center;
-            font-size: 12px; /* 大幅减小标题字体 */
+            font-size: 18px;
             font-weight: bold;
-            margin-bottom: 4px; /* 减小下边距 */
-            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
         }
 
-        /* 基础信息区域 - 改为两行三列布局，更加紧凑 */
+        /* 基础信息区域 */
         .base-info {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* 改为三列 */
-            gap: 3px 8px; /* 大幅减小间距 */
-            margin-bottom: 4px; /* 减小下边距 */
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px 15px;
+            margin-bottom: 10px;
             border-bottom: 1px solid #000;
-            padding-bottom: 3px; /* 减小内边距 */
+            padding-bottom: 8px;
         }
         .info-item {
             display: flex;
@@ -81,92 +75,71 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            min-height: 10px; /* 减小最小高度 */
         }
         .info-label {
-            width: 50px; /* 大幅减小宽度 */
+            width: 75px;
             font-weight: 600;
             flex-shrink: 0;
-            font-size: 8px; /* 减小字体 */
         }
         .info-value {
             flex: 1;
             border-bottom: 1px dashed #333;
-            padding: 0;
-            min-height: 10px; /* 减小最小高度 */
-            font-size: 8px; /* 减小字体 */
+            padding: 1px 0;
+            min-height: 18px;
         }
 
-        /* 商品明细表格 - 去掉物料编号列，调整为7列 */
+        /* 商品明细表格 - 去掉物料编码列，调整为7列 */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 4px 0; /* 大幅减小边距 */
+            margin: 10px 0;
             table-layout: fixed;
         }
         .detail-table th, .detail-table td {
             border: 1px solid #000;
-            padding: 2px 1px; /* 大幅减小内边距 */
+            padding: 6px 3px;
             text-align: center;
             vertical-align: middle;
-            font-size: 8px; /* 大幅减小字体 */
-            word-break: break-word;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            line-height: 1.0; /* 减小行高 */
+            font-size: 12px;
+            word-break: break-all;
         }
         .detail-table th {
             font-weight: bold;
-            padding: 2px 1px;
         }
-        /* 表格列宽分配 - 7列布局，总和调整为90%以留出更多空间 */
-        .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; } /* 物料名称 */
-        .detail-table th:nth-child(2), td:nth-child(2) { width: 18%; } /* 规格型号 */
-        .detail-table th:nth-child(3), td:nth-child(3) { width: 7%; }  /* 单位 */
-        .detail-table th:nth-child(4), td:nth-child(4) { width: 9%; } /* 数量 */
-        .detail-table th:nth-child(5), td:nth-child(5) { width: 11%; } /* 单价 */
-        .detail-table th:nth-child(6), td:nth-child(6) { width: 11%; } /* 金额 */
-        .detail-table th:nth-child(7), td:nth-child(7) { width: 22%; } /* 备注 */
+        /* 表格列宽分配 - 调整为7列 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 16%; } /* 物料名称 */
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 22%; } /* 规格型号 */
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 单位 */
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 10%; } /* 数量 */
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 12%; } /* 单价（元） */
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 12%; } /* 金额（元） */
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 20%; } /* 备注 */
         .detail-table .remark {
             text-align: left;
-            padding-left: 1px; /* 减小内边距 */
-            font-size: 7px; /* 备注字体更小 */
-        }
-        /* 针对规格型号列的特殊处理 */
-        .detail-table td:nth-child(2) {
-            font-size: 7px; /* 进一步减小字体 */
-            line-height: 1.0;
-        }
-        /* 数值列右对齐 */
-        .detail-table td:nth-child(4),
-        .detail-table td:nth-child(5),
-        .detail-table td:nth-child(6) {
-            text-align: right;
-            padding-right: 2px;
+            padding-left: 5px;
         }
 
         /* 合计区域 */
         .total-area {
-            margin: 4px 0; /* 减小边距 */
+            margin: 10px 0;
             text-align: right;
-            font-size: 9px; /* 减小字体 */
+            font-size: 14px;
         }
         .total-amount {
-            font-size: 10px; /* 减小字体 */
+            font-size: 15px;
             font-weight: bold;
             color: #000;
-            margin-left: 4px;
+            margin-left: 8px;
         }
         .amount-capital {
-            margin-top: 1px; /* 减小上边距 */
+            margin-top: 4px;
             font-weight: 600;
-            font-size: 8px; /* 减小字体 */
         }
 
         /* 底部信息 */
         .footer {
-            margin-top: 6px; /* 减小上边距 */
-            font-size: 8px; /* 减小字体 */
+            margin-top: 15px;
+            font-size: 12px;
             color: #333;
             display: flex;
             justify-content: space-between;
@@ -184,18 +157,18 @@
         /* 操作按钮 */
         .btn-group {
             position: fixed;
-            top: 8px;
-            right: 8px;
+            top: 15px;
+            right: 15px;
             z-index: 9999;
             display: flex;
-            gap: 6px;
+            gap: 10px;
         }
         .print-btn, .refresh-btn {
-            padding: 4px 8px;
+            padding: 8px 16px;
             border: none;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 13px;
             color: #fff;
         }
         .print-btn {
@@ -213,38 +186,21 @@
 
         /* 提示信息 */
         .tip {
-            margin: 6px 0;
-            padding: 4px;
+            margin: 10px 0;
+            padding: 8px;
             background: #f5f5f5;
-            border-left: 2px solid #007fff;
-            font-size: 9px;
+            border-left: 3px solid #007fff;
+            font-size: 12px;
             color: #333;
         }
         .error-tip {
             background: #fff8f8;
-            border-left: 2px solid #d32f2f;
+            border-left: 3px solid #d32f2f;
             color: #d32f2f;
-        }
-        
-        /* 打印内容宽度检测辅助类 */
-        .print-width-check {
-            position: absolute;
-            left: -9999px;
-            width: 241mm;
-            height: 1px;
-            background: red;
-        }
-        
-        /* 强制所有内容不换行 */
-        .no-wrap {
-            white-space: nowrap;
         }
     </style>
 </head>
 <body>
-    <!-- 打印宽度检测辅助元素 -->
-    <div class="print-width-check"></div>
-    
     <!-- 操作按钮（非打印元素） -->
     <div class="btn-group no-print">
         <button class="refresh-btn" onclick="loadSelectedData()">选择并加载数据</button>
@@ -303,7 +259,7 @@
             </thead>
             <tbody id="detailTableBody">
                 <tr>
-                    <td colspan="7" style="text-align: center; color: #666; font-size: 8px;">点击「选择并加载数据」唤起对话框选择记录</td>
+                    <td colspan="7" style="text-align: center; color: #666;">点击「选择并加载数据」唤起对话框选择记录</td>
                 </tr>
             </tbody>
         </table>
@@ -315,7 +271,7 @@
             <div class="amount-capital">
                 大写金额：<span id="capitalAmount">零元整</span>
             </div>
-            <div id="taxRemark" style="margin-top: 1px; font-size: 8px;"></div>
+            <div id="taxRemark" style="margin-top: 4px; font-size: 12px;"></div>
         </div>
 
         <div class="footer">
@@ -399,6 +355,94 @@
         return `${year}年${month}月${day}日`;
     }
 
+    // 改进的字段提取函数，支持各种数据结构
+    function getFieldValue(fields, fieldPath) {
+        if (!fields || typeof fields !== 'object') {
+            console.warn('fields 为空或不是对象:', fields);
+            return '';
+        }
+        
+        console.log(`尝试获取字段: ${fieldPath}`);
+        console.log('当前 fields:', fields);
+        
+        // 特殊处理：如果字段路径中没有点号或方括号，直接返回字段值
+        if (!fieldPath.includes('.') && !fieldPath.includes('[')) {
+            const value = fields[fieldPath];
+            console.log(`直接获取字段 ${fieldPath}:`, value);
+            
+            // 如果是数组，返回第一个元素的text属性
+            if (Array.isArray(value) && value.length > 0) {
+                if (typeof value[0] === 'object' && value[0].text !== undefined) {
+                    return value[0].text;
+                }
+                return value[0];
+            }
+            
+            // 如果是对象且有text属性
+            if (typeof value === 'object' && value !== null && value.text !== undefined) {
+                return value.text;
+            }
+            
+            return value || '';
+        }
+        
+        // 处理带路径的字段
+        let value = fields;
+        const pathParts = fieldPath.split('.');
+        
+        for (let i = 0; i < pathParts.length; i++) {
+            const part = pathParts[i];
+            
+            // 处理数组索引，如 [0]
+            if (part.includes('[')) {
+                const arrayMatch = part.match(/(\w+)\[(\d+)\]/);
+                if (arrayMatch) {
+                    const fieldName = arrayMatch[1];
+                    const index = parseInt(arrayMatch[2]);
+                    
+                    console.log(`处理数组字段: ${fieldName}[${index}]`);
+                    
+                    if (value && value[fieldName] && Array.isArray(value[fieldName])) {
+                        if (value[fieldName][index] !== undefined) {
+                            value = value[fieldName][index];
+                            console.log(`获取到数组元素:`, value);
+                        } else {
+                            console.warn(`数组索引 ${index} 超出范围`);
+                            return '';
+                        }
+                    } else {
+                        console.warn(`字段 ${fieldName} 不存在或不是数组`);
+                        return '';
+                    }
+                }
+            } 
+            // 处理普通属性
+            else {
+                console.log(`获取属性: ${part}`);
+                if (value && typeof value === 'object' && part in value) {
+                    value = value[part];
+                } else {
+                    console.warn(`属性 ${part} 不存在`);
+                    return '';
+                }
+            }
+            
+            if (value === null || value === undefined) {
+                return '';
+            }
+        }
+        
+        console.log(`最终获取的值:`, value);
+        
+        // 如果值是对象且有 text 属性，返回 text
+        if (typeof value === 'object' && value !== null && value.text !== undefined) {
+            console.log(`返回 text 属性: ${value.text}`);
+            return value.text;
+        }
+        
+        return value;
+    }
+
     // 更简单的字段提取函数（备用方案）
     function extractField(fields, fieldId) {
         if (!fields || !fieldId) return '';
@@ -439,23 +483,6 @@
         const formatTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         document.getElementById('printTime').textContent = formatTime;
         return formatTime;
-    }
-
-    // 检查打印适配性
-    function checkPrintFit() {
-        const container = document.querySelector('.invoice-container');
-        const pageWidth = 241; // mm
-        const containerWidth = container.offsetWidth;
-        const scale = 3.78; // 1mm ≈ 3.78px
-        const actualWidth = containerWidth / scale;
-        
-        console.log(`检查打印适配性：`);
-        console.log(`容器宽度: ${containerWidth}px`);
-        console.log(`实际宽度: ${actualWidth.toFixed(1)}mm`);
-        console.log(`页面宽度: ${pageWidth}mm`);
-        console.log(`超出: ${(actualWidth - pageWidth).toFixed(1)}mm`);
-        
-        return actualWidth <= pageWidth;
     }
 
     // ==================== 核心函数 ====================
@@ -633,7 +660,7 @@
                 }
 
                 // 提取表格行字段（去掉物料编码）
-                console.log('=== 提取表格行字段（7列） ===');
+                console.log('=== 提取表格行字段 ===');
                 
                 // 物料名称：fldZRE1MMR
                 const materialName = extractField(fields, 'fldZRE1MMR') || '';
@@ -693,12 +720,6 @@
             // 隐藏错误提示
             errorTip.style.display = 'none';
 
-            // 检查打印适配性
-            const isFit = checkPrintFit();
-            if (!isFit) {
-                console.warn('⚠️ 警告：内容可能超出打印区域，请进一步调整样式');
-            }
-
             console.log('✅ 所有数据加载完成，合计金额：', totalAmount);
 
         } catch (err) {
@@ -723,15 +744,6 @@
             errorTip.textContent = `错误：${errMsg}`;
             errorTip.style.display = 'block';
             return;
-        }
-
-        // 检查打印适配性
-        if (!checkPrintFit()) {
-            const confirmPrint = confirm('警告：内容可能超出打印区域。是否继续打印？');
-            if (!confirmPrint) {
-                console.log('用户取消打印');
-                return;
-            }
         }
 
         // 更新打印时间
