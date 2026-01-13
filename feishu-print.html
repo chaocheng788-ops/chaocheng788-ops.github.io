@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>销售明细表 - 飞书多选打印版测试</title>
+    <title>销售明细表 - 飞书多选打印版（251mm×235mm）</title>
     <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
     <script src="lark-sdk.umd.js" defer></script>
     <style>
-        /* 基础样式：适配241mm×235mm多联打印纸 */
+        /* 基础样式：适配251mm×235mm多联打印纸 */
         * {
             margin: 0;
             padding: 0;
@@ -15,7 +15,7 @@
             font-family: "仿宋", "SimSun", serif;
         }
         body {
-            width: 241mm;
+            width: 251mm; /* 宽度增加10mm */
             padding: 8mm 10mm;
             margin: 0 auto;
             background: #fff;
@@ -32,7 +32,7 @@
                 height: auto;
             }
             @page {
-                size: 241mm 235mm; /* 高度改为235mm */
+                size: 251mm 235mm; /* 宽度改为251mm，高度保持235mm */
                 margin: 8mm 10mm;
                 orphans: 2;
                 widows: 2;
@@ -106,14 +106,14 @@
         .detail-table th {
             font-weight: bold;
         }
-        /* 表格列宽分配 - 调整为7列 */
-        .detail-table th:nth-child(1), td:nth-child(1) { width: 16%; } /* 物料名称 */
-        .detail-table th:nth-child(2), td:nth-child(2) { width: 22%; } /* 规格型号 */
-        .detail-table th:nth-child(3), td:nth-child(3) { width: 8%; }  /* 单位 */
-        .detail-table th:nth-child(4), td:nth-child(4) { width: 10%; } /* 数量 */
-        .detail-table th:nth-child(5), td:nth-child(5) { width: 12%; } /* 单价（元） */
-        .detail-table th:nth-child(6), td:nth-child(6) { width: 12%; } /* 金额（元） */
-        .detail-table th:nth-child(7), td:nth-child(7) { width: 20%; } /* 备注 */
+        /* 表格列宽分配 - 调整为7列，现在有更多空间，可以适当增加列宽 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 18%; } /* 物料名称 - 增加2% */
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 25%; } /* 规格型号 - 增加3% */
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 9%; }  /* 单位 - 增加1% */
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 11%; } /* 数量 - 增加1% */
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 13%; } /* 单价（元） - 增加1% */
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 13%; } /* 金额（元） - 增加1% */
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 21%; } /* 备注 - 增加1% */
         .detail-table .remark {
             text-align: left;
             padding-left: 5px;
