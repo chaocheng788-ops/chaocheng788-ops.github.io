@@ -1,26 +1,27 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>销售明细表 - 飞书多选打印版（251mm×235mm）</title>
+    <title>销售明细表 - 飞书多选打印版（200mm×140mm）</title>
     <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
     <script src="lark-sdk.umd.js" defer></script>
     <style>
-        /* 基础样式：适配251mm×235mm多联打印纸 */
+        /* 基础样式：适配200mm×140mm多联打印纸 */
         * {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            box-sizing: border-box !important;
             font-family: "仿宋", "SimSun", serif;
         }
         body {
-            width: 251mm; /* 宽度增加10mm */
-            padding: 8mm 10mm;
+            width: 200mm; /* 宽度减小到200mm */
+            padding: 3mm 5mm; /* 减小内边距 */
             margin: 0 auto;
             background: #fff;
-            font-size: 13px;
-            line-height: 1.4;
+            font-size: 10px; /* 减小字体 */
+            line-height: 1.2;
         }
 
         /* 打印专用样式优化 */
@@ -32,8 +33,8 @@
                 height: auto;
             }
             @page {
-                size: 251mm 235mm; /* 宽度改为251mm，高度保持235mm */
-                margin: 8mm 10mm;
+                size: 200mm 140mm; /* 改为200mm×140mm */
+                margin: 3mm 5mm;
                 orphans: 2;
                 widows: 2;
                 @top-center: none;
@@ -47,27 +48,33 @@
             }
             th, td {
                 border-color: #000 !important;
-                border-width: 0.8px !important;
+                border-width: 0.6px !important; /* 减小边框宽度 */
+            }
+            /* 打印时强制内容不超出 */
+            body, .invoice-container, .detail-table {
+                overflow: visible !important;
+                width: 100% !important;
+                max-width: 100% !important;
             }
         }
 
         /* 单据标题 */
         .title {
             text-align: center;
-            font-size: 18px;
+            font-size: 14px; /* 减小标题字体 */
             font-weight: bold;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
         }
 
-        /* 基础信息区域 */
+        /* 基础信息区域 - 改为三列布局，更加紧凑 */
         .base-info {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px 15px;
-            margin-bottom: 10px;
+            grid-template-columns: repeat(3, 1fr); /* 改为三列 */
+            gap: 4px 8px; /* 减小间距 */
+            margin-bottom: 6px;
             border-bottom: 1px solid #000;
-            padding-bottom: 8px;
+            padding-bottom: 4px;
         }
         .info-item {
             display: flex;
@@ -75,71 +82,92 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            min-height: 12px;
         }
         .info-label {
-            width: 75px;
+            width: 50px; /* 减小宽度 */
             font-weight: 600;
             flex-shrink: 0;
+            font-size: 9px;
         }
         .info-value {
             flex: 1;
             border-bottom: 1px dashed #333;
-            padding: 1px 0;
-            min-height: 18px;
+            padding: 0;
+            min-height: 12px;
+            font-size: 9px;
         }
 
         /* 商品明细表格 - 去掉物料编码列，调整为7列 */
         .detail-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0;
+            margin: 6px 0;
             table-layout: fixed;
         }
         .detail-table th, .detail-table td {
             border: 1px solid #000;
-            padding: 6px 3px;
+            padding: 2px 1px; /* 减小内边距 */
             text-align: center;
             vertical-align: middle;
-            font-size: 12px;
-            word-break: break-all;
+            font-size: 9px; /* 减小字体 */
+            word-break: break-word;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.1;
         }
         .detail-table th {
             font-weight: bold;
+            padding: 2px 1px;
         }
-        /* 表格列宽分配 - 调整为7列，现在有更多空间，可以适当增加列宽 */
-        .detail-table th:nth-child(1), td:nth-child(1) { width: 18%; } /* 物料名称 - 增加2% */
-        .detail-table th:nth-child(2), td:nth-child(2) { width: 25%; } /* 规格型号 - 增加3% */
-        .detail-table th:nth-child(3), td:nth-child(3) { width: 9%; }  /* 单位 - 增加1% */
-        .detail-table th:nth-child(4), td:nth-child(4) { width: 11%; } /* 数量 - 增加1% */
-        .detail-table th:nth-child(5), td:nth-child(5) { width: 13%; } /* 单价（元） - 增加1% */
-        .detail-table th:nth-child(6), td:nth-child(6) { width: 13%; } /* 金额（元） - 增加1% */
-        .detail-table th:nth-child(7), td:nth-child(7) { width: 21%; } /* 备注 - 增加1% */
+        /* 表格列宽分配 - 7列布局，大幅压缩列宽 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 12%; } /* 物料名称 */
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 18%; } /* 规格型号 */
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 6%; }  /* 单位 */
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 8%; } /* 数量 */
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 10%; } /* 单价（元） */
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 10%; } /* 金额（元） */
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 36%; } /* 备注 - 增大比例 */
         .detail-table .remark {
             text-align: left;
-            padding-left: 5px;
+            padding-left: 1px;
+            font-size: 8px; /* 备注字体更小 */
+        }
+        /* 针对规格型号列的特殊处理 */
+        .detail-table td:nth-child(2) {
+            font-size: 8px; /* 进一步减小字体 */
+            line-height: 1.0;
+        }
+        /* 数值列右对齐 */
+        .detail-table td:nth-child(4),
+        .detail-table td:nth-child(5),
+        .detail-table td:nth-child(6) {
+            text-align: right;
+            padding-right: 2px;
         }
 
         /* 合计区域 */
         .total-area {
-            margin: 10px 0;
+            margin: 6px 0;
             text-align: right;
-            font-size: 14px;
+            font-size: 10px;
         }
         .total-amount {
-            font-size: 15px;
+            font-size: 11px;
             font-weight: bold;
             color: #000;
-            margin-left: 8px;
+            margin-left: 4px;
         }
         .amount-capital {
-            margin-top: 4px;
+            margin-top: 2px;
             font-weight: 600;
+            font-size: 9px;
         }
 
         /* 底部信息 */
         .footer {
-            margin-top: 15px;
-            font-size: 12px;
+            margin-top: 8px;
+            font-size: 9px;
             color: #333;
             display: flex;
             justify-content: space-between;
@@ -157,18 +185,18 @@
         /* 操作按钮 */
         .btn-group {
             position: fixed;
-            top: 15px;
-            right: 15px;
+            top: 10px;
+            right: 10px;
             z-index: 9999;
             display: flex;
-            gap: 10px;
+            gap: 6px;
         }
         .print-btn, .refresh-btn {
-            padding: 8px 16px;
+            padding: 5px 10px;
             border: none;
-            border-radius: 4px;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 11px;
             color: #fff;
         }
         .print-btn {
@@ -186,16 +214,16 @@
 
         /* 提示信息 */
         .tip {
-            margin: 10px 0;
-            padding: 8px;
+            margin: 8px 0;
+            padding: 5px;
             background: #f5f5f5;
-            border-left: 3px solid #007fff;
-            font-size: 12px;
+            border-left: 2px solid #007fff;
+            font-size: 10px;
             color: #333;
         }
         .error-tip {
             background: #fff8f8;
-            border-left: 3px solid #d32f2f;
+            border-left: 2px solid #d32f2f;
             color: #d32f2f;
         }
     </style>
@@ -259,7 +287,7 @@
             </thead>
             <tbody id="detailTableBody">
                 <tr>
-                    <td colspan="7" style="text-align: center; color: #666;">点击「选择并加载数据」唤起对话框选择记录</td>
+                    <td colspan="7" style="text-align: center; color: #666; font-size: 9px;">点击「选择并加载数据」唤起对话框选择记录</td>
                 </tr>
             </tbody>
         </table>
@@ -271,7 +299,7 @@
             <div class="amount-capital">
                 大写金额：<span id="capitalAmount">零元整</span>
             </div>
-            <div id="taxRemark" style="margin-top: 4px; font-size: 12px;"></div>
+            <div id="taxRemark" style="margin-top: 2px; font-size: 9px;"></div>
         </div>
 
         <div class="footer">
@@ -353,94 +381,6 @@
         const day = date.getDate();
         
         return `${year}年${month}月${day}日`;
-    }
-
-    // 改进的字段提取函数，支持各种数据结构
-    function getFieldValue(fields, fieldPath) {
-        if (!fields || typeof fields !== 'object') {
-            console.warn('fields 为空或不是对象:', fields);
-            return '';
-        }
-        
-        console.log(`尝试获取字段: ${fieldPath}`);
-        console.log('当前 fields:', fields);
-        
-        // 特殊处理：如果字段路径中没有点号或方括号，直接返回字段值
-        if (!fieldPath.includes('.') && !fieldPath.includes('[')) {
-            const value = fields[fieldPath];
-            console.log(`直接获取字段 ${fieldPath}:`, value);
-            
-            // 如果是数组，返回第一个元素的text属性
-            if (Array.isArray(value) && value.length > 0) {
-                if (typeof value[0] === 'object' && value[0].text !== undefined) {
-                    return value[0].text;
-                }
-                return value[0];
-            }
-            
-            // 如果是对象且有text属性
-            if (typeof value === 'object' && value !== null && value.text !== undefined) {
-                return value.text;
-            }
-            
-            return value || '';
-        }
-        
-        // 处理带路径的字段
-        let value = fields;
-        const pathParts = fieldPath.split('.');
-        
-        for (let i = 0; i < pathParts.length; i++) {
-            const part = pathParts[i];
-            
-            // 处理数组索引，如 [0]
-            if (part.includes('[')) {
-                const arrayMatch = part.match(/(\w+)\[(\d+)\]/);
-                if (arrayMatch) {
-                    const fieldName = arrayMatch[1];
-                    const index = parseInt(arrayMatch[2]);
-                    
-                    console.log(`处理数组字段: ${fieldName}[${index}]`);
-                    
-                    if (value && value[fieldName] && Array.isArray(value[fieldName])) {
-                        if (value[fieldName][index] !== undefined) {
-                            value = value[fieldName][index];
-                            console.log(`获取到数组元素:`, value);
-                        } else {
-                            console.warn(`数组索引 ${index} 超出范围`);
-                            return '';
-                        }
-                    } else {
-                        console.warn(`字段 ${fieldName} 不存在或不是数组`);
-                        return '';
-                    }
-                }
-            } 
-            // 处理普通属性
-            else {
-                console.log(`获取属性: ${part}`);
-                if (value && typeof value === 'object' && part in value) {
-                    value = value[part];
-                } else {
-                    console.warn(`属性 ${part} 不存在`);
-                    return '';
-                }
-            }
-            
-            if (value === null || value === undefined) {
-                return '';
-            }
-        }
-        
-        console.log(`最终获取的值:`, value);
-        
-        // 如果值是对象且有 text 属性，返回 text
-        if (typeof value === 'object' && value !== null && value.text !== undefined) {
-            console.log(`返回 text 属性: ${value.text}`);
-            return value.text;
-        }
-        
-        return value;
     }
 
     // 更简单的字段提取函数（备用方案）
