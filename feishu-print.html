@@ -55,6 +55,13 @@
                 width: 100% !important;
                 max-width: 100% !important;
             }
+            /* 合计行打印样式 */
+            .total-row td {
+                font-weight: bold !important;
+                background-color: #f5f5f5 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
 
         /* 单据标题 */
@@ -144,12 +151,41 @@
             text-align: right;
             padding-right: 3px;
         }
+        
+        /* 合计行特殊样式 */
+        .total-row {
+            font-weight: bold;
+            background-color: #f5f5f5;
+        }
+        .total-row td {
+            padding: 4px 2px !important;
+            text-align: left !important;
+            font-size: 10px !important;
+        }
+        .total-row td:nth-child(4),
+        .total-row td:nth-child(6) {
+            text-align: right !important;
+            padding-right: 3px !important;
+        }
+        /* 合计行第一列样式 */
+        .total-label {
+            font-size: 11px;
+            font-weight: bold;
+        }
+        /* 合计行第二列样式 - 金额大写 */
+        .capital-amount {
+            font-size: 9px;
+            line-height: 1.2;
+            text-align: left;
+        }
 
-        /* 合计区域 */
+        /* 合计区域（保留但简化） */
         .total-area {
             margin: 8px 0;
             text-align: right;
             font-size: 11px;
+            border-top: 1px dashed #333;
+            padding-top: 5px;
         }
         .total-amount {
             font-size: 12px;
@@ -542,6 +578,7 @@
             // ========== 步骤8：处理数据并渲染 ==========
             console.log('【步骤8】处理数据并渲染');
             let totalAmount = 0;
+            let totalQuantity = 0;
             let tableHtml = '';
             let taxRemark = '';
 
@@ -626,7 +663,8 @@
                 const remark = fields.fldQSFfBoE || '';
                 console.log('备注:', remark);
 
-                // 累加合计金额
+                // 累加合计金额和数量
+                totalQuantity += quantity;
                 totalAmount += amount;
 
                 // 生成表格行HTML（7列）
@@ -643,14 +681,31 @@
                 `;
             }
 
-            // ========== 步骤9：更新页面显示 ==========
-            console.log('【步骤9】更新页面显示');
+            // ========== 步骤9：生成表格合计行 ==========
+            console.log('【步骤9】生成表格合计行');
+            const capitalAmount = convertToCapital(totalAmount);
+            
+            // 添加表格合计行
+            tableHtml += `
+                <tr class="total-row">
+                    <td class="total-label">合计</td>
+                    <td class="capital-amount">${capitalAmount}</td>
+                    <td></td>
+                    <td>${totalQuantity.toFixed(3)}</td>
+                    <td></td>
+                    <td>${totalAmount.toFixed(2)}</td>
+                    <td></td>
+                </tr>
+            `;
+
+            // ========== 步骤10：更新页面显示 ==========
+            console.log('【步骤10】更新页面显示');
             // 更新表格内容
             tableBody.innerHTML = tableHtml;
             
-            // 更新合计数据
+            // 更新底部合计区域
             document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
-            document.getElementById('capitalAmount').textContent = convertToCapital(totalAmount);
+            document.getElementById('capitalAmount').textContent = capitalAmount;
             document.getElementById('taxRemark').textContent = taxRemark;
             
             // 更新打印时间
@@ -659,7 +714,7 @@
             // 隐藏错误提示
             errorTip.style.display = 'none';
 
-            console.log('✅ 所有数据加载完成，合计金额：', totalAmount);
+            console.log('✅ 所有数据加载完成，合计数量：', totalQuantity, '合计金额：', totalAmount);
 
         } catch (err) {
             // 异常处理：显示错误提示 + 控制台打印
