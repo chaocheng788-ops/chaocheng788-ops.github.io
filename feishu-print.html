@@ -132,10 +132,6 @@
             padding-left: 2px;
             font-size: 9px; /* 备注字体稍小 */
         }
-        .detail-table .total-row td {
-            font-weight: bold;
-            background-color: #f9f9f9;
-        }
         /* 针对规格型号列的特殊处理 */
         .detail-table td:nth-child(2) {
             font-size: 9px; /* 稍小字体 */
@@ -391,6 +387,7 @@
         if (!fields || !fieldId) return '';
         
         const fieldValue = fields[fieldId];
+        console.log(`提取字段 ${fieldId}:`, fieldValue);
         
         if (!fieldValue) return '';
         
@@ -545,7 +542,6 @@
             // ========== 步骤8：处理数据并渲染 ==========
             console.log('【步骤8】处理数据并渲染');
             let totalAmount = 0;
-            let totalQuantity = 0;
             let tableHtml = '';
             let taxRemark = '';
 
@@ -602,7 +598,7 @@
                     }
                 }
 
-                // 提取表格行字段
+                // 提取表格行字段（去掉物料编码）
                 console.log('=== 提取表格行字段 ===');
                 
                 // 物料名称：fldZRE1MMR
@@ -627,49 +623,39 @@
                 const amount = parseFloat(fields.fldPnhczuU) || 0;
                 console.log('金额:', amount, '原始值:', fields.fldPnhczuU);
                 
-                // 累加合计
-                totalAmount += amount;
-                totalQuantity += quantity;
+                // 原有备注字段：fldQSFfBoE
+                const originalRemark = fields.fldQSFfBoE || '';
+                console.log('原有备注:', originalRemark);
                 
-                // === 新增逻辑开始：提取并拼接备注 ===
-                // 获取原有备注
-                let originalRemark = fields.fldQSFfBoE || '';
-                console.log('原始备注:', originalRemark);
-                
-                // 提取fld48sccKI字段（数组）的第一个元素的text值
+                // 新增：获取fld48sccKI数组字段第一个元素的text值
                 let extraRemark = '';
-                const fld48sccKIValue = fields.fld48sccKI;
-                console.log('fld48sccKI字段原始值:', fld48sccKIValue);
-                
-                if (fld48sccKIValue && Array.isArray(fld48sccKIValue) && fld48sccKIValue.length > 0) {
-                    // 获取第一个元素
-                    const firstElement = fld48sccKIValue[0];
-                    console.log('fld48sccKI第一个元素:', firstElement);
-                    
-                    // 提取text字段值
-                    if (firstElement && typeof firstElement === 'object' && firstElement.text !== undefined) {
+                const fld48sccKI = fields.fld48sccKI;
+                if (fld48sccKI && Array.isArray(fld48sccKI) && fld48sccKI.length > 0) {
+                    const firstElement = fld48sccKI[0];
+                    if (typeof firstElement === 'object' && firstElement.text !== undefined) {
                         extraRemark = firstElement.text;
-                        console.log('提取到的extraRemark:', extraRemark);
                     } else if (typeof firstElement === 'string') {
                         extraRemark = firstElement;
-                        console.log('提取到的extraRemark(字符串):', extraRemark);
                     }
                 }
+                console.log('fld48sccKI字段值:', fld48sccKI);
+                console.log('提取的额外备注:', extraRemark);
                 
-                // 拼接备注：原有备注 + 新增内容（如果有）
+                // 拼接备注：原有备注 + 空格 + fld48sccKI的第一个元素text值
                 let finalRemark = originalRemark;
-                if (extraRemark && extraRemark.trim() !== '') {
-                    // 如果原有备注不为空，添加分隔符
-                    if (originalRemark && originalRemark.trim() !== '') {
-                        finalRemark = originalRemark + '；' + extraRemark;
+                if (extraRemark) {
+                    if (originalRemark) {
+                        finalRemark = originalRemark + ' ' + extraRemark;
                     } else {
                         finalRemark = extraRemark;
                     }
                 }
                 console.log('最终备注:', finalRemark);
-                // === 新增逻辑结束 ===
 
-                // 生成表格行HTML（7列） - 使用finalRemark替换原来的remark
+                // 累加合计金额
+                totalAmount += amount;
+
+                // 生成表格行HTML（7列）
                 tableHtml += `
                     <tr>
                         <td>${materialName}</td>
@@ -683,23 +669,12 @@
                 `;
             }
 
-            // 添加合计行到表格内部
-            tableHtml += `
-                <tr class="total-row">
-                    <td colspan="3" style="text-align: left; font-weight: bold; padding-left: 5px;">合计</td>
-                    <td>${totalQuantity.toFixed(2)}</td>
-                    <td></td>
-                    <td>${totalAmount.toFixed(2)}</td>
-                    <td></td>
-                </tr>
-            `;
-
             // ========== 步骤9：更新页面显示 ==========
             console.log('【步骤9】更新页面显示');
             // 更新表格内容
             tableBody.innerHTML = tableHtml;
             
-            // 更新表格外部合计数据
+            // 更新合计数据
             document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
             document.getElementById('capitalAmount').textContent = convertToCapital(totalAmount);
             document.getElementById('taxRemark').textContent = taxRemark;
@@ -710,7 +685,7 @@
             // 隐藏错误提示
             errorTip.style.display = 'none';
 
-            console.log('✅ 所有数据加载完成，合计金额：', totalAmount, '合计数量：', totalQuantity);
+            console.log('✅ 所有数据加载完成，合计金额：', totalAmount);
 
         } catch (err) {
             // 异常处理：显示错误提示 + 控制台打印
