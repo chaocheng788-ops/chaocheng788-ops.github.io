@@ -1,294 +1,830 @@
-// ==================== 核心函数 ====================
-
-// 核心改造：通过selectRecordIdList唤起选择对话框获取记录ID并加载数据
-async function loadSelectedData() {
-    const errorTip = document.getElementById('errorTip');
-    const tableBody = document.getElementById('detailTableBody');
-    
-    try {
-        // ========== 步骤1：检查SDK加载状态 ==========
-        console.log('【步骤1】检查飞书SDK加载状态');
-        if (!window.bitable || !window.bitable.base || !window.bitable.ui) {
-            throw new Error('飞书SDK加载失败，请确认lark-sdk.umd.js文件路径正确');
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售明细表 - 飞书多选打印版（200mm×160mm）</title>
+    <!-- 引用转换后的UMD格式SDK（确保与HTML同目录） -->
+    <script src="lark-sdk.umd.js" defer></script>
+    <style>
+        /* 基础样式：适配200mm×160mm多联打印纸 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box !important;
+            font-family: "仿宋", "SimSun", serif;
         }
-        console.log('✅ SDK加载成功，bitable对象：', window.bitable);
-
-        // ========== 步骤2：获取base实例 ==========
-        console.log('【步骤2】获取base实例');
-        const base = window.bitable.base;
-        if (!base) {
-            throw new Error('未获取到base实例，请确认在飞书多维表格环境中运行');
+        body {
+            width: 200mm; /* 宽度200mm */
+            padding: 5mm 5mm; /* 增加上下内边距，减少左右内边距 */
+            margin: 0 auto;
+            background: #fff;
+            font-size: 11px; /* 稍微增加字体 */
+            line-height: 1.3;
         }
-        console.log('✅ base实例获取成功：', base);
 
-        // ========== 步骤3：获取tableId和viewId ==========
-        console.log('【步骤3】获取当前活跃表格的tableId和viewId');
-        const selection = await base.getSelection();
-        console.log('原始selection数据：', selection);
+        /* 打印专用样式优化 */
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+                width: 100%;
+                height: auto;
+            }
+            @page {
+                size: 200mm 160mm; /* 高度增加到160mm */
+                margin: 5mm 5mm; /* 同步调整边距 */
+                orphans: 2;
+                widows: 2;
+                @top-center: none;
+                @bottom-center: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+            table {
+                page-break-inside: auto;
+            }
+            th, td {
+                border-color: #000 !important;
+                border-width: 0.6px !important; /* 减小边框宽度 */
+            }
+            /* 打印时强制内容不超出 */
+            body, .invoice-container, .detail-table {
+                overflow: visible !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            /* 合计行打印样式 */
+            .total-row td {
+                font-weight: bold !important;
+                background-color: #f5f5f5 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* 单据标题 */
+        .title {
+            text-align: center;
+            font-size: 15px; /* 稍微增加标题字体 */
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        /* 基础信息区域 - 改为三列布局，更加紧凑 */
+        .base-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 改为三列 */
+            gap: 5px 8px; /* 稍微增加间距 */
+            margin-bottom: 8px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-height: 14px;
+        }
+        .info-label {
+            width: 55px; /* 稍微增加宽度 */
+            font-weight: 600;
+            flex-shrink: 0;
+            font-size: 10px;
+        }
+        .info-value {
+            flex: 1;
+            border-bottom: 1px dashed #333;
+            padding: 0;
+            min-height: 14px;
+            font-size: 10px;
+        }
+
+        /* 商品明细表格 - 去掉物料编码列，调整为7列 */
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            table-layout: fixed;
+        }
+        .detail-table th, .detail-table td {
+            border: 1px solid #000;
+            padding: 3px 2px; /* 稍微增加内边距 */
+            text-align: center;
+            vertical-align: middle;
+            font-size: 10px; /* 稍微增加字体 */
+            word-break: break-word;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.2;
+        }
+        .detail-table th {
+            font-weight: bold;
+            padding: 3px 2px;
+        }
+        /* 表格列宽分配 - 7列布局 */
+        .detail-table th:nth-child(1), td:nth-child(1) { width: 14%; } /* 物料名称 - 增加2% */
+        .detail-table th:nth-child(2), td:nth-child(2) { width: 20%; } /* 规格型号 - 增加2% */
+        .detail-table th:nth-child(3), td:nth-child(3) { width: 7%; }  /* 单位 */
+        .detail-table th:nth-child(4), td:nth-child(4) { width: 9%; } /* 数量 - 增加1% */
+        .detail-table th:nth-child(5), td:nth-child(5) { width: 11%; } /* 单价（元） - 增加1% */
+        .detail-table th:nth-child(6), td:nth-child(6) { width: 11%; } /* 金额（元） - 增加1% */
+        .detail-table th:nth-child(7), td:nth-child(7) { width: 28%; } /* 备注 - 减少8% */
+        .detail-table .remark {
+            text-align: left;
+            padding-left: 2px;
+            font-size: 9px; /* 备注字体稍小 */
+        }
+        /* 针对规格型号列的特殊处理 */
+        .detail-table td:nth-child(2) {
+            font-size: 9px; /* 稍小字体 */
+            line-height: 1.1;
+        }
+        /* 数值列右对齐 */
+        .detail-table td:nth-child(4),
+        .detail-table td:nth-child(5),
+        .detail-table td:nth-child(6) {
+            text-align: right;
+            padding-right: 3px;
+        }
         
-        let tableId = selection?.tableId;
-        let viewId = selection?.viewId;
-        
-        // 兼容：如果selection中没有，从活跃表格获取
-        if (!tableId) {
-            const activeTable = await base.getActiveTable();
-            tableId = activeTable?.id;
-            viewId = activeTable?.activeViewId || viewId;
+        /* 合计行特殊样式 */
+        .total-row {
+            font-weight: bold;
+            background-color: #f5f5f5;
         }
-        
-        if (!tableId || !viewId) {
-            throw new Error('未获取到tableId或viewId，请先打开飞书多维表格的具体视图');
+        .total-row td {
+            padding: 4px 2px !important;
+            font-size: 10px !important;
         }
-        console.log(`✅ tableId和viewId获取成功：tableId=${tableId}, viewId=${viewId}`);
-
-        // ========== 步骤4：调用selectRecordIdList唤起选择对话框 ==========
-        console.log('【步骤4】调用bitable.ui.selectRecordIdList唤起记录选择对话框');
-        const selectedRecordIds = await window.bitable.ui.selectRecordIdList(tableId, viewId);
-        console.log('✅ 选择对话框返回的recordId列表：', selectedRecordIds);
-
-        // 验证选中结果
-        if (!selectedRecordIds || selectedRecordIds.length === 0) {
-            throw new Error('未在对话框中选择任何记录，请重新选择');
+        /* 合计行列对齐调整 */
+        .total-row td:nth-child(1) {
+            text-align: left !important;
+            padding-left: 4px !important;
+            font-weight: bold;
+            font-size: 11px !important;
         }
-        console.log(`✅ 共选中 ${selectedRecordIds.length} 条记录`);
-
-        // ========== 步骤5：获取当前活跃表格实例 ==========
-        console.log('【步骤5】获取当前活跃表格实例');
-        const table = await base.getActiveTable();
-        if (!table) {
-            throw new Error('未找到当前活跃表格');
+        /* 金额大写单元格（合并第2列和第3列） */
+        .total-row td:nth-child(2) {
+            text-align: left !important;
+            padding-left: 4px !important;
         }
-        console.log('✅ 表格实例获取成功：', table);
-
-        // ========== 步骤6：获取表格所有记录 ==========
-        console.log('【步骤6】获取表格所有记录');
-        let allRecords = await table.getRecordList();
-        console.log('原始getRecordList返回值：', allRecords, '类型：', typeof allRecords, '是否数组：', Array.isArray(allRecords));
-
-        // 关键调整：优先提取recordList
-        if (!Array.isArray(allRecords)) {
-            if (allRecords?.recordList && Array.isArray(allRecords.recordList)) {
-                allRecords = allRecords.recordList;
-            }
-            else if (allRecords?.records && Array.isArray(allRecords.records)) {
-                allRecords = allRecords.records;
-            } else if (allRecords?.data && Array.isArray(allRecords.data)) {
-                allRecords = allRecords.data;
-            }
-            else {
-                allRecords = [];
-            }
-            console.log('转换后的allRecords数组：', allRecords, '长度：', allRecords.length);
+        /* 合计数量对齐数量列（第4列） */
+        .total-row td:nth-child(3) {
+            text-align: right !important;
+            padding-right: 3px !important;
+            font-weight: bold;
+        }
+        /* 合计金额对齐金额列（第6列） */
+        .total-row td:nth-child(5) {
+            text-align: right !important;
+            padding-right: 3px !important;
+            font-weight: bold;
+        }
+        /* 金额大写样式 */
+        .capital-amount {
+            font-size: 9px;
+            line-height: 1.2;
+            text-align: left;
+            word-break: break-all;
         }
 
-        if (allRecords.length === 0) {
-            console.warn('⚠️ 警告：表格记录数组为空');
-        } else {
-            console.log(`✅ 成功提取记录数组，共 ${allRecords.length} 条记录`);
+        /* 合计区域（保留但简化） */
+        .total-area {
+            margin: 8px 0;
+            text-align: right;
+            font-size: 11px;
+            border-top: 1px dashed #333;
+            padding-top: 5px;
+        }
+        .total-amount {
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
+            margin-left: 6px;
+        }
+        .amount-capital {
+            margin-top: 3px;
+            font-weight: 600;
+            font-size: 10px;
         }
 
-        // ========== 步骤7：筛选选中的记录 ==========
-        console.log('【步骤7】筛选选中的记录（根据recordId列表）');
-        // 打印第一条记录的结构，确认fields字段
-        if (allRecords.length > 0) {
-            console.log('第一条记录的完整结构：', allRecords[0]);
-            console.log('第一条记录的fields字段：', allRecords[0].fields);
-            console.log('fields字段的所有键名：', Object.keys(allRecords[0].fields || {}));
+        /* 底部信息 */
+        .footer {
+            margin-top: 10px;
+            font-size: 10px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .footer-left {
+            text-align: left;
+            width: 60%;
+        }
+        .footer-right {
+            text-align: right;
+            width: 40%;
         }
 
-        // 修正筛选条件：使用recordId字段（根据实际情况调整）
-        const selectedRecords = allRecords.filter(record => {
-            const recordId = record.recordId || record.id || record._id;
-            
-            if (!recordId) {
-                console.warn('⚠️ 跳过无id的异常记录：', record);
-                return false;
-            }
-            return selectedRecordIds.includes(recordId);
-        });
-
-        console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条`);
-
-        if (selectedRecords.length === 0) {
-            throw new Error('未找到匹配的记录，请检查字段映射');
+        /* 操作按钮 */
+        .btn-group {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            display: flex;
+            gap: 6px;
+        }
+        .print-btn, .refresh-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #fff;
+        }
+        .print-btn {
+            background: #007fff;
+        }
+        .print-btn:hover {
+            background: #0066cc;
+        }
+        .refresh-btn {
+            background: #4CAF50;
+        }
+        .refresh-btn:hover {
+            background: #3d8b40;
         }
 
-        // ========== 步骤8：处理数据并渲染 ==========
-        console.log('【步骤8】处理数据并渲染');
-        let totalAmount = 0;
-        let totalQuantity = 0;
-        let tableHtml = '';
-        let taxRemark = '';
+        /* 提示信息 */
+        .tip {
+            margin: 8px 0;
+            padding: 6px;
+            background: #f5f5f5;
+            border-left: 2px solid #007fff;
+            font-size: 11px;
+            color: #333;
+        }
+        .error-tip {
+            background: #fff8f8;
+            border-left: 2px solid #d32f2f;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <!-- 操作按钮（非打印元素） -->
+    <div class="btn-group no-print">
+        <button class="refresh-btn" onclick="loadSelectedData()">选择并加载数据</button>
+        <button class="print-btn" onclick="printDocument()">打印选中数据</button>
+    </div>
 
-        // 清空不需要展示的字段
-        document.getElementById('deliveryDriver').textContent = '';
-        document.getElementById('customerAddress').textContent = '';
+    <!-- 提示信息 -->
+    <div class="tip no-print">
+        操作说明：1. 点击「选择并加载数据」唤起记录选择对话框；2. 在对话框中选择要打印的记录并确认；3. 确认无误后点击「打印选中数据」
+    </div>
+    <div id="errorTip" class="tip error-tip no-print" style="display: none;"></div>
 
-        // 遍历选中记录
-        for (let i = 0; i < selectedRecords.length; i++) {
-            const record = selectedRecords[i];
-            const fields = record.fields || {};
-            console.log(`处理第 ${i+1} 条记录，fields：`, fields);
+    <!-- 单据内容 -->
+    <div class="invoice-container">
+        <div class="title">河南省飞马起重机械集团有限公司销售明细表</div>
 
-            // 如果是第一条记录，提取去重展示的字段
-            if (i === 0) {
-                console.log('=== 提取去重展示字段 ===');
-                
-                // 发票号：fldFRpsxIn.text
-                const invoiceNo = extractField(fields, 'fldFRpsxIn') || '';
-                console.log('提取发票号:', invoiceNo);
-                document.getElementById('invoiceNo').textContent = invoiceNo;
-                
-                // 发货日期：fldXDRjMOt[0]（时间戳转日期）
-                const timestamp = extractField(fields, 'fldXDRjMOt');
-                console.log('提取时间戳:', timestamp);
-                const shipDate = timestampToDate(timestamp);
-                document.getElementById('shipDate').textContent = shipDate;
-                
-                // 销售经理：fldD0DvgRD[0].text
-                const salesManager = extractField(fields, 'fldD0DvgRD') || '';
-                console.log('提取销售经理:', salesManager);
-                document.getElementById('salesManager').textContent = salesManager;
-                
-                // 送货司机：fldpmnkxAJ[0].text
-                const deliveryDriver = extractField(fields, 'fldpmnkxAJ') || '';
-                console.log('提取送货司机:', deliveryDriver);
-                document.getElementById('deliveryDriver').textContent = deliveryDriver;
-                
-                // 客户名称：fldfsZTsu9[0].text
-                const customerName = extractField(fields, 'fldfsZTsu9') || '';
-                console.log('提取客户名称:', customerName);
-                document.getElementById('customerName').textContent = customerName;
-                
-                // 客户地址：fldc76DtjW[0].text
-                const customerAddress = extractField(fields, 'fldc76DtjW') || '';
-                console.log('提取客户地址:', customerAddress);
-                document.getElementById('customerAddress').textContent = customerAddress;
-                
-                // 含税说明：fldzNp2Gpg[0].text
-                const taxType = extractField(fields, 'fldzNp2Gpg') || '';
-                console.log('提取税类型:', taxType);
-                if (taxType === '含税') {
-                    taxRemark = '说明：此金额为含税价';
-                }
-            }
+        <div class="base-info">
+            <div class="info-item">
+                <span class="info-label">发票号：</span>
+                <span class="info-value" id="invoiceNo"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">发货日期：</span>
+                <span class="info-value" id="shipDate"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">销售经理：</span>
+                <span class="info-value" id="salesManager"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">送货司机：</span>
+                <span class="info-value" id="deliveryDriver"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">客户名称：</span>
+                <span class="info-value" id="customerName"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">客户地址：</span>
+                <span class="info-value" id="customerAddress"></span>
+            </div>
+        </div>
 
-            // 提取表格行字段（去掉物料编码）
-            console.log('=== 提取表格行字段 ===');
-            
-            // 物料名称：fldZRE1MMR
-            const materialName = extractField(fields, 'fldZRE1MMR') || '';
-            console.log('物料名称:', materialName);
-            
-            // 规格型号：fldTRySYAT
-            const specification = extractField(fields, 'fldTRySYAT') || '';
-            console.log('规格型号:', specification);
-            
-            // 单位：fldNQg0P9l
-            const unit = extractField(fields, 'fldNQg0P9l') || '';
-            console.log('单位:', unit);
-            
-            // 数值字段直接获取
-            const quantity = parseFloat(fields.fldLgfZ4zt) || 0;
-            console.log('数量:', quantity, '原始值:', fields.fldLgfZ4zt);
-            
-            const unitPrice = parseFloat(fields.fldIeO9wYh) || 0;
-            console.log('单价:', unitPrice, '原始值:', fields.fldIeO9wYh);
-            
-            const amount = parseFloat(fields.fldPnhczuU) || 0;
-            console.log('金额:', amount, '原始值:', fields.fldPnhczuU);
-            
-            // 原有备注
-            const originalRemark = fields.fldQSFfBoE || '';
-            console.log('原有备注:', originalRemark);
-            
-            // 新增逻辑：提取fld48sccKI数组字段的第一个元素的text值
-            let additionalRemark = '';
-            const fld48sccKI = fields.fld48sccKI;
-            console.log('fld48sccKI字段值:', fld48sccKI);
-            
-            if (fld48sccKI && Array.isArray(fld48sccKI) && fld48sccKI.length > 0) {
-                const firstElement = fld48sccKI[0];
-                if (firstElement && typeof firstElement === 'object' && firstElement.text) {
-                    additionalRemark = firstElement.text;
-                    console.log('提取到fld48sccKI第一个元素的text值:', additionalRemark);
-                }
-            }
-            
-            // 拼接备注：原有备注 + 空格 + 新增内容
-            let finalRemark = originalRemark;
-            if (additionalRemark) {
-                if (originalRemark) {
-                    finalRemark = originalRemark + ' ' + additionalRemark;
-                } else {
-                    finalRemark = additionalRemark;
-                }
-            }
-            console.log('最终备注:', finalRemark);
-
-            // 累加合计金额和数量
-            totalQuantity += quantity;
-            totalAmount += amount;
-
-            // 生成表格行HTML（7列）
-            tableHtml += `
+        <table class="detail-table">
+            <thead>
                 <tr>
-                    <td>${materialName}</td>
-                    <td>${specification}</td>
-                    <td>${unit}</td>
-                    <td>${quantity.toFixed(3)}</td>
-                    <td>${unitPrice.toFixed(2)}</td>
-                    <td>${amount.toFixed(2)}</td>
-                    <td class="remark">${finalRemark}</td>
+                    <!-- 去掉物料编码列，调整为7列 -->
+                    <th>物料名称</th>
+                    <th>规格型号</th>
+                    <th>单位</th>
+                    <th>数量</th>
+                    <th>单价（元）</th>
+                    <th>金额（元）</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody id="detailTableBody">
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #666; font-size: 10px;">点击「选择并加载数据」唤起对话框选择记录</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="total-area">
+            <div>
+                金额合计：<span class="total-amount" id="totalAmount">¥0.00</span>
+            </div>
+            <div class="amount-capital">
+                大写金额：<span id="capitalAmount">零元整</span>
+            </div>
+            <div id="taxRemark" style="margin-top: 3px; font-size: 10px;"></div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-left">
+                打印时间：<span id="printTime"></span><br>
+                单据联次：共4联（留存/客户/记账/会计）
+            </div>
+            <div class="footer-right">
+                第 <span id="pageNum">1</span> 页 / 共 <span id="totalPage">1</span> 页
+            </div>
+        </div>
+    </div>
+
+   <script>
+    // ==================== 辅助函数 ====================
+    
+    // 金额大写转换工具
+    function convertToCapital(amount) {
+        const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+        const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿'];
+        const decimals = ['角', '分'];
+        
+        // 处理负数
+        let isNegative = false;
+        if (amount < 0) {
+            isNegative = true;
+            amount = Math.abs(amount);
+        }
+        
+        let integerPart = Math.floor(amount);
+        let decimalPart = Math.round((amount - integerPart) * 100);
+        
+        let capital = '';
+        if (integerPart === 0) {
+            capital = '零';
+        } else {
+            let str = integerPart.toString();
+            for (let i = 0; i < str.length; i++) {
+                const digit = parseInt(str[i]);
+                const pos = str.length - 1 - i;
+                if (digit !== 0) {
+                    capital += digits[digit] + units[pos];
+                } else {
+                    if (pos % 4 !== 0 || (i > 0 && parseInt(str[i-1]) !== 0)) {
+                        capital += digits[digit];
+                    }
+                }
+            }
+        }
+        capital += '元';
+        if (decimalPart === 0) {
+            capital += '整';
+        } else {
+            if (Math.floor(decimalPart / 10) > 0) {
+                capital += digits[Math.floor(decimalPart / 10)] + decimals[0];
+            } else if (integerPart !== 0) {
+                capital += '零';
+            }
+            if (decimalPart % 10 > 0) {
+                capital += digits[decimalPart % 10] + decimals[1];
+            }
+        }
+        
+        return (isNegative ? '负' : '') + capital;
+    }
+
+    // 时间戳转日期格式（处理毫秒时间戳）
+    function timestampToDate(timestamp) {
+        if (!timestamp) return '';
+        
+        // 如果是毫秒时间戳，转换为秒
+        if (timestamp > 1000000000000) {
+            timestamp = Math.floor(timestamp / 1000);
+        }
+        
+        const date = new Date(timestamp * 1000);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        
+        return `${year}年${month}月${day}日`;
+    }
+
+    // 更简单的字段提取函数（备用方案）
+    function extractField(fields, fieldId) {
+        if (!fields || !fieldId) return '';
+        
+        const fieldValue = fields[fieldId];
+        console.log(`提取字段 ${fieldId}:`, fieldValue);
+        
+        if (!fieldValue) return '';
+        
+        // 如果是数组
+        if (Array.isArray(fieldValue) && fieldValue.length > 0) {
+            // 数组元素是对象且有text属性
+            if (typeof fieldValue[0] === 'object' && fieldValue[0].text !== undefined) {
+                return fieldValue[0].text;
+            }
+            // 数组元素是时间戳
+            else if (typeof fieldValue[0] === 'number') {
+                return fieldValue[0];
+            }
+            // 其他情况返回第一个元素
+            else {
+                return fieldValue[0];
+            }
+        }
+        // 如果是对象且有text属性
+        else if (typeof fieldValue === 'object' && fieldValue !== null && fieldValue.text !== undefined) {
+            return fieldValue.text;
+        }
+        // 其他情况直接返回值
+        else {
+            return fieldValue;
+        }
+    }
+
+    // 更新打印时间
+    function updatePrintTime() {
+        const now = new Date();
+        const formatTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        document.getElementById('printTime').textContent = formatTime;
+        return formatTime;
+    }
+
+    // ==================== 核心函数 ====================
+    
+    // 核心改造：通过selectRecordIdList唤起选择对话框获取记录ID并加载数据
+    async function loadSelectedData() {
+        const errorTip = document.getElementById('errorTip');
+        const tableBody = document.getElementById('detailTableBody');
+        
+        try {
+            // ========== 步骤1：检查SDK加载状态 ==========
+            console.log('【步骤1】检查飞书SDK加载状态');
+            if (!window.bitable || !window.bitable.base || !window.bitable.ui) {
+                throw new Error('飞书SDK加载失败，请确认lark-sdk.umd.js文件路径正确');
+            }
+            console.log('✅ SDK加载成功，bitable对象：', window.bitable);
+
+            // ========== 步骤2：获取base实例 ==========
+            console.log('【步骤2】获取base实例');
+            const base = window.bitable.base;
+            if (!base) {
+                throw new Error('未获取到base实例，请确认在飞书多维表格环境中运行');
+            }
+            console.log('✅ base实例获取成功：', base);
+
+            // ========== 步骤3：获取tableId和viewId ==========
+            console.log('【步骤3】获取当前活跃表格的tableId和viewId');
+            const selection = await base.getSelection();
+            console.log('原始selection数据：', selection);
+            
+            let tableId = selection?.tableId;
+            let viewId = selection?.viewId;
+            
+            // 兼容：如果selection中没有，从活跃表格获取
+            if (!tableId) {
+                const activeTable = await base.getActiveTable();
+                tableId = activeTable?.id;
+                viewId = activeTable?.activeViewId || viewId;
+            }
+            
+            if (!tableId || !viewId) {
+                throw new Error('未获取到tableId或viewId，请先打开飞书多维表格的具体视图');
+            }
+            console.log(`✅ tableId和viewId获取成功：tableId=${tableId}, viewId=${viewId}`);
+
+            // ========== 步骤4：调用selectRecordIdList唤起选择对话框 ==========
+            console.log('【步骤4】调用bitable.ui.selectRecordIdList唤起记录选择对话框');
+            const selectedRecordIds = await window.bitable.ui.selectRecordIdList(tableId, viewId);
+            console.log('✅ 选择对话框返回的recordId列表：', selectedRecordIds);
+
+            // 验证选中结果
+            if (!selectedRecordIds || selectedRecordIds.length === 0) {
+                throw new Error('未在对话框中选择任何记录，请重新选择');
+            }
+            console.log(`✅ 共选中 ${selectedRecordIds.length} 条记录`);
+
+            // ========== 步骤5：获取当前活跃表格实例 ==========
+            console.log('【步骤5】获取当前活跃表格实例');
+            const table = await base.getActiveTable();
+            if (!table) {
+                throw new Error('未找到当前活跃表格');
+            }
+            console.log('✅ 表格实例获取成功：', table);
+
+            // ========== 步骤6：获取表格所有记录 ==========
+            console.log('【步骤6】获取表格所有记录');
+            let allRecords = await table.getRecordList();
+            console.log('原始getRecordList返回值：', allRecords, '类型：', typeof allRecords, '是否数组：', Array.isArray(allRecords));
+
+            // 关键调整：优先提取recordList
+            if (!Array.isArray(allRecords)) {
+                if (allRecords?.recordList && Array.isArray(allRecords.recordList)) {
+                    allRecords = allRecords.recordList;
+                }
+                else if (allRecords?.records && Array.isArray(allRecords.records)) {
+                    allRecords = allRecords.records;
+                } else if (allRecords?.data && Array.isArray(allRecords.data)) {
+                    allRecords = allRecords.data;
+                }
+                else {
+                    allRecords = [];
+                }
+                console.log('转换后的allRecords数组：', allRecords, '长度：', allRecords.length);
+            }
+
+            if (allRecords.length === 0) {
+                console.warn('⚠️ 警告：表格记录数组为空');
+            } else {
+                console.log(`✅ 成功提取记录数组，共 ${allRecords.length} 条记录`);
+            }
+
+            // ========== 步骤7：筛选选中的记录 ==========
+            console.log('【步骤7】筛选选中的记录（根据recordId列表）');
+            // 打印第一条记录的结构，确认fields字段
+            if (allRecords.length > 0) {
+                console.log('第一条记录的完整结构：', allRecords[0]);
+                console.log('第一条记录的fields字段：', allRecords[0].fields);
+                console.log('fields字段的所有键名：', Object.keys(allRecords[0].fields || {}));
+            }
+
+            // 修正筛选条件：使用recordId字段（根据实际情况调整）
+            const selectedRecords = allRecords.filter(record => {
+                const recordId = record.recordId || record.id || record._id;
+                
+                if (!recordId) {
+                    console.warn('⚠️ 跳过无id的异常记录：', record);
+                    return false;
+                }
+                return selectedRecordIds.includes(recordId);
+            });
+
+            console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条`);
+
+            if (selectedRecords.length === 0) {
+                throw new Error('未找到匹配的记录，请检查字段映射');
+            }
+
+            // ========== 步骤8：处理数据并渲染 ==========
+            console.log('【步骤8】处理数据并渲染');
+            let totalAmount = 0;
+            let totalQuantity = 0;
+            let tableHtml = '';
+            let taxRemark = '';
+
+            // 清空不需要展示的字段
+            document.getElementById('deliveryDriver').textContent = '';
+            document.getElementById('customerAddress').textContent = '';
+
+            // 遍历选中记录
+            for (let i = 0; i < selectedRecords.length; i++) {
+                const record = selectedRecords[i];
+                const fields = record.fields || {};
+                console.log(`处理第 ${i+1} 条记录，fields：`, fields);
+
+                // 如果是第一条记录，提取去重展示的字段
+                if (i === 0) {
+                    console.log('=== 提取去重展示字段 ===');
+                    
+                    // 发票号：fldFRpsxIn.text
+                    const invoiceNo = extractField(fields, 'fldFRpsxIn') || '';
+                    console.log('提取发票号:', invoiceNo);
+                    document.getElementById('invoiceNo').textContent = invoiceNo;
+                    
+                    // 发货日期：fldXDRjMOt[0]（时间戳转日期）
+                    const timestamp = extractField(fields, 'fldXDRjMOt');
+                    console.log('提取时间戳:', timestamp);
+                    const shipDate = timestampToDate(timestamp);
+                    document.getElementById('shipDate').textContent = shipDate;
+                    
+                    // 销售经理：fldD0DvgRD[0].text
+                    const salesManager = extractField(fields, 'fldD0DvgRD') || '';
+                    console.log('提取销售经理:', salesManager);
+                    document.getElementById('salesManager').textContent = salesManager;
+                    
+                    // 送货司机：fldpmnkxAJ[0].text
+                    const deliveryDriver = extractField(fields, 'fldpmnkxAJ') || '';
+                    console.log('提取送货司机:', deliveryDriver);
+                    document.getElementById('deliveryDriver').textContent = deliveryDriver;
+                    
+                    // 客户名称：fldfsZTsu9[0].text
+                    const customerName = extractField(fields, 'fldfsZTsu9') || '';
+                    console.log('提取客户名称:', customerName);
+                    document.getElementById('customerName').textContent = customerName;
+                    
+                    // 客户地址：fldc76DtjW[0].text
+                    const customerAddress = extractField(fields, 'fldc76DtjW') || '';
+                    console.log('提取客户地址:', customerAddress);
+                    document.getElementById('customerAddress').textContent = customerAddress;
+                    
+                    // 含税说明：fldzNp2Gpg[0].text
+                    const taxType = extractField(fields, 'fldzNp2Gpg') || '';
+                    console.log('提取税类型:', taxType);
+                    if (taxType === '含税') {
+                        taxRemark = '说明：此金额为含税价';
+                    }
+                }
+
+                // 提取表格行字段（去掉物料编码）
+                console.log('=== 提取表格行字段 ===');
+                
+                // 物料名称：fldZRE1MMR
+                const materialName = extractField(fields, 'fldZRE1MMR') || '';
+                console.log('物料名称:', materialName);
+                
+                // 规格型号：fldTRySYAT
+                const specification = extractField(fields, 'fldTRySYAT') || '';
+                console.log('规格型号:', specification);
+                
+                // 单位：fldNQg0P9l
+                const unit = extractField(fields, 'fldNQg0P9l') || '';
+                console.log('单位:', unit);
+                
+                // 数值字段直接获取
+                const quantity = parseFloat(fields.fldLgfZ4zt) || 0;
+                console.log('数量:', quantity, '原始值:', fields.fldLgfZ4zt);
+                
+                const unitPrice = parseFloat(fields.fldIeO9wYh) || 0;
+                console.log('单价:', unitPrice, '原始值:', fields.fldIeO9wYh);
+                
+                const amount = parseFloat(fields.fldPnhczuU) || 0;
+                console.log('金额:', amount, '原始值:', fields.fldPnhczuU);
+                
+                // 原有备注
+                const originalRemark = fields.fldQSFfBoE || '';
+                console.log('原有备注:', originalRemark);
+                
+                // 新增逻辑：提取fld48sccKI数组字段的第一个元素的text值
+                let additionalRemark = '';
+                const fld48sccKI = fields.fld48sccKI;
+                console.log('fld48sccKI字段值:', fld48sccKI);
+                
+                if (fld48sccKI && Array.isArray(fld48sccKI) && fld48sccKI.length > 0) {
+                    const firstElement = fld48sccKI[0];
+                    if (firstElement && typeof firstElement === 'object' && firstElement.text) {
+                        additionalRemark = firstElement.text;
+                        console.log('提取到fld48sccKI第一个元素的text值:', additionalRemark);
+                    }
+                }
+                
+                // 拼接备注：原有备注 + 空格 + 新增内容
+                let finalRemark = originalRemark;
+                if (additionalRemark) {
+                    if (originalRemark) {
+                        finalRemark = originalRemark + ' ' + additionalRemark;
+                    } else {
+                        finalRemark = additionalRemark;
+                    }
+                }
+                console.log('最终备注:', finalRemark);
+
+                // 累加合计金额和数量
+                totalQuantity += quantity;
+                totalAmount += amount;
+
+                // 生成表格行HTML（7列）
+                tableHtml += `
+                    <tr>
+                        <td>${materialName}</td>
+                        <td>${specification}</td>
+                        <td>${unit}</td>
+                        <td>${quantity.toFixed(3)}</td>
+                        <td>${unitPrice.toFixed(2)}</td>
+                        <td>${amount.toFixed(2)}</td>
+                        <td class="remark">${finalRemark}</td>
+                    </tr>
+                `;
+            }
+
+            // ========== 步骤9：生成表格合计行 ==========
+            console.log('【步骤9】生成表格合计行');
+            const capitalAmount = convertToCapital(totalAmount);
+            
+            // 添加表格合计行 - 调整列结构
+            // 第一列：显示"合计"
+            // 第二列：金额大写（向左合并单位列，colspan="2"）
+            // 第三列：合计数量（对齐数量列）
+            // 第四列：空（单价列）
+            // 第五列：合计金额（对齐金额列）
+            // 第六列：空（备注列）
+            tableHtml += `
+                <tr class="total-row">
+                    <td>合计</td>
+                    <td class="capital-amount" colspan="2">${capitalAmount}</td>
+                    <td>${totalQuantity.toFixed(3)}</td>
+                    <td></td>
+                    <td>${totalAmount.toFixed(2)}</td>
+                    <td></td>
                 </tr>
             `;
+
+            // ========== 步骤10：更新页面显示 ==========
+            console.log('【步骤10】更新页面显示');
+            // 更新表格内容
+            tableBody.innerHTML = tableHtml;
+            
+            // 更新底部合计区域
+            document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
+            document.getElementById('capitalAmount').textContent = capitalAmount;
+            document.getElementById('taxRemark').textContent = taxRemark;
+            
+            // 更新打印时间
+            updatePrintTime();
+            
+            // 隐藏错误提示
+            errorTip.style.display = 'none';
+
+            console.log('✅ 所有数据加载完成，合计数量：', totalQuantity.toFixed(3), '合计金额：', totalAmount.toFixed(2));
+
+        } catch (err) {
+            // 异常处理：显示错误提示 + 控制台打印
+            console.error('❌ 加载数据失败：', err);
+            errorTip.textContent = `错误：${err.message}`;
+            errorTip.style.display = 'block';
+            tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
+        }
+    }
+
+    // 打印功能（飞书/浏览器兼容）
+    function printDocument() {
+        const tableBody = document.getElementById('detailTableBody');
+        const errorTip = document.getElementById('errorTip');
+
+        console.log('【打印功能】触发打印操作');
+        // 检查是否有有效数据
+        if (tableBody.querySelector('td[colspan="7"]') || tableBody.children.length === 0) {
+            const errMsg = '无有效打印数据，请先选择并加载数据';
+            console.error('❌ 打印失败：', errMsg);
+            errorTip.textContent = `错误：${errMsg}`;
+            errorTip.style.display = 'block';
+            return;
         }
 
-        // ========== 步骤9：生成表格合计行 ==========
-        console.log('【步骤9】生成表格合计行');
-        const capitalAmount = convertToCapital(totalAmount);
-        
-        // 添加表格合计行 - 调整列结构
-        // 第一列：显示"合计"
-        // 第二列：金额大写（向左合并单位列，colspan="2"）
-        // 第三列：合计数量（对齐数量列）
-        // 第四列：空（单价列）
-        // 第五列：合计金额（对齐金额列）
-        // 第六列：空（备注列）
-        tableHtml += `
-            <tr class="total-row">
-                <td>合计</td>
-                <td class="capital-amount" colspan="2">${capitalAmount}</td>
-                <td>${totalQuantity.toFixed(3)}</td>
-                <td></td>
-                <td>${totalAmount.toFixed(2)}</td>
-                <td></td>
-            </tr>
-        `;
-
-        // ========== 步骤10：更新页面显示 ==========
-        console.log('【步骤10】更新页面显示');
-        // 更新表格内容
-        tableBody.innerHTML = tableHtml;
-        
-        // 更新底部合计区域
-        document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
-        document.getElementById('capitalAmount').textContent = capitalAmount;
-        document.getElementById('taxRemark').textContent = taxRemark;
-        
         // 更新打印时间
         updatePrintTime();
-        
-        // 隐藏错误提示
-        errorTip.style.display = 'none';
 
-        console.log('✅ 所有数据加载完成，合计数量：', totalQuantity.toFixed(3), '合计金额：', totalAmount.toFixed(2));
-
-    } catch (err) {
-        // 异常处理：显示错误提示 + 控制台打印
-        console.error('❌ 加载数据失败：', err);
-        errorTip.textContent = `错误：${err.message}`;
-        errorTip.style.display = 'block';
-        tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #d32f2f;">${err.message}</td></tr>`;
+        // 飞书环境优先使用飞书打印API
+        if (window.bitable && window.bitable.base) {
+            try {
+                console.log('尝试调用飞书内置打印API');
+                window.bitable.base.print({
+                    success: () => console.log('✅ 飞书打印触发成功'),
+                    fail: (err) => {
+                        console.error('❌ 飞书打印失败，切换为浏览器打印：', err);
+                        window.print();
+                    }
+                });
+            } catch (e) {
+                console.warn('⚠️ 飞书打印API调用失败，使用浏览器打印：', e);
+                window.print();
+            }
+        } else {
+            console.log('非飞书环境，使用浏览器打印');
+            window.print();
+        }
     }
-}
+
+    // 初始化：更新打印时间
+    window.onload = function() {
+        console.log('【初始化】页面加载完成，执行初始化操作');
+        updatePrintTime();
+        
+        // 清空初始显示内容
+        document.getElementById('deliveryDriver').textContent = '';
+        document.getElementById('customerAddress').textContent = '';
+        document.getElementById('taxRemark').textContent = '';
+
+        // 检查飞书环境
+        if (window.bitable && window.bitable.base) {
+            console.log('✅ 检测到飞书环境，初始化完成');
+        } else {
+            console.warn('⚠️ 未检测到飞书环境，部分功能可能无法使用');
+        }
+    };
+</script>
+</body>
+</html>
