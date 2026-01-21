@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -387,7 +388,6 @@
         if (!fields || !fieldId) return '';
         
         const fieldValue = fields[fieldId];
-        console.log(`提取字段 ${fieldId}:`, fieldValue);
         
         if (!fieldValue) return '';
         
@@ -598,7 +598,7 @@
                     }
                 }
 
-                // 提取表格行字段（去掉物料编码）
+                // 提取表格行字段
                 console.log('=== 提取表格行字段 ===');
                 
                 // 物料名称：fldZRE1MMR
@@ -623,45 +623,36 @@
                 const amount = parseFloat(fields.fldPnhczuU) || 0;
                 console.log('金额:', amount, '原始值:', fields.fldPnhczuU);
                 
-                // === 新增逻辑开始 ===
+                // === 新增逻辑开始：提取并拼接备注 ===
                 // 获取原有备注
                 let originalRemark = fields.fldQSFfBoE || '';
                 console.log('原始备注:', originalRemark);
                 
-                // 提取fld48sccKI字段的第一个元素的text值
+                // 提取fld48sccKI字段（数组）的第一个元素的text值
                 let extraRemark = '';
                 const fld48sccKIValue = fields.fld48sccKI;
                 console.log('fld48sccKI字段原始值:', fld48sccKIValue);
                 
-                if (fld48sccKIValue) {
-                    if (Array.isArray(fld48sccKIValue) && fld48sccKIValue.length > 0) {
-                        // 获取第一个元素
-                        const firstElement = fld48sccKIValue[0];
-                        console.log('fld48sccKI第一个元素:', firstElement);
-                        
-                        // 提取text字段值
-                        if (firstElement && typeof firstElement === 'object' && firstElement.text !== undefined) {
-                            extraRemark = firstElement.text;
-                            console.log('提取到的extraRemark:', extraRemark);
-                        } else if (typeof firstElement === 'string') {
-                            extraRemark = firstElement;
-                            console.log('提取到的extraRemark(字符串):', extraRemark);
-                        }
-                    } else if (typeof fld48sccKIValue === 'object' && fld48sccKIValue.text !== undefined) {
-                        // 如果不是数组，直接取text
-                        extraRemark = fld48sccKIValue.text;
-                        console.log('提取到的extraRemark(对象):', extraRemark);
-                    } else if (typeof fld48sccKIValue === 'string') {
-                        extraRemark = fld48sccKIValue;
+                if (fld48sccKIValue && Array.isArray(fld48sccKIValue) && fld48sccKIValue.length > 0) {
+                    // 获取第一个元素
+                    const firstElement = fld48sccKIValue[0];
+                    console.log('fld48sccKI第一个元素:', firstElement);
+                    
+                    // 提取text字段值
+                    if (firstElement && typeof firstElement === 'object' && firstElement.text !== undefined) {
+                        extraRemark = firstElement.text;
+                        console.log('提取到的extraRemark:', extraRemark);
+                    } else if (typeof firstElement === 'string') {
+                        extraRemark = firstElement;
                         console.log('提取到的extraRemark(字符串):', extraRemark);
                     }
                 }
                 
                 // 拼接备注：原有备注 + 新增内容（如果有）
                 let finalRemark = originalRemark;
-                if (extraRemark) {
+                if (extraRemark && extraRemark.trim() !== '') {
                     // 如果原有备注不为空，添加分隔符
-                    if (originalRemark) {
+                    if (originalRemark && originalRemark.trim() !== '') {
                         finalRemark = originalRemark + '；' + extraRemark;
                     } else {
                         finalRemark = extraRemark;
