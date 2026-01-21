@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -132,6 +131,10 @@
             text-align: left;
             padding-left: 2px;
             font-size: 9px; /* 备注字体稍小 */
+        }
+        .detail-table .total-row td {
+            font-weight: bold;
+            background-color: #f9f9f9;
         }
         /* 针对规格型号列的特殊处理 */
         .detail-table td:nth-child(2) {
@@ -542,6 +545,7 @@
             // ========== 步骤8：处理数据并渲染 ==========
             console.log('【步骤8】处理数据并渲染');
             let totalAmount = 0;
+            let totalQuantity = 0;
             let tableHtml = '';
             let taxRemark = '';
 
@@ -623,6 +627,10 @@
                 const amount = parseFloat(fields.fldPnhczuU) || 0;
                 console.log('金额:', amount, '原始值:', fields.fldPnhczuU);
                 
+                // 累加合计
+                totalAmount += amount;
+                totalQuantity += quantity;
+                
                 // === 新增逻辑开始：提取并拼接备注 ===
                 // 获取原有备注
                 let originalRemark = fields.fldQSFfBoE || '';
@@ -661,9 +669,6 @@
                 console.log('最终备注:', finalRemark);
                 // === 新增逻辑结束 ===
 
-                // 累加合计金额
-                totalAmount += amount;
-
                 // 生成表格行HTML（7列） - 使用finalRemark替换原来的remark
                 tableHtml += `
                     <tr>
@@ -678,12 +683,23 @@
                 `;
             }
 
+            // 添加合计行到表格内部
+            tableHtml += `
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: left; font-weight: bold; padding-left: 5px;">合计</td>
+                    <td>${totalQuantity.toFixed(2)}</td>
+                    <td></td>
+                    <td>${totalAmount.toFixed(2)}</td>
+                    <td></td>
+                </tr>
+            `;
+
             // ========== 步骤9：更新页面显示 ==========
             console.log('【步骤9】更新页面显示');
             // 更新表格内容
             tableBody.innerHTML = tableHtml;
             
-            // 更新合计数据
+            // 更新表格外部合计数据
             document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
             document.getElementById('capitalAmount').textContent = convertToCapital(totalAmount);
             document.getElementById('taxRemark').textContent = taxRemark;
@@ -694,7 +710,7 @@
             // 隐藏错误提示
             errorTip.style.display = 'none';
 
-            console.log('✅ 所有数据加载完成，合计金额：', totalAmount);
+            console.log('✅ 所有数据加载完成，合计金额：', totalAmount, '合计数量：', totalQuantity);
 
         } catch (err) {
             // 异常处理：显示错误提示 + 控制台打印
