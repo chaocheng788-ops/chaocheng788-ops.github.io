@@ -62,6 +62,12 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
+            /* 说明行打印样式 */
+            .remark-row td {
+                background-color: #f9f9f9 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
             /* 隐藏底部合计区域的大写金额和金额合计 */
             .total-amount, .amount-capital {
                 display: none !important;
@@ -195,6 +201,17 @@
             line-height: 1.2;
             text-align: left;
             word-break: break-all;
+        }
+
+        /* 说明行特殊样式 */
+        .remark-row {
+            background-color: #f9f9f9;
+        }
+        .remark-row td {
+            text-align: left !important;
+            padding: 4px 2px !important;
+            font-size: 9px !important;
+            line-height: 1.2;
         }
 
         /* 合计区域（隐藏大写金额和金额合计，只保留税说明） */
@@ -473,6 +490,23 @@
         }
     }
 
+    // 提取fld3WpqDfY字段的说明信息
+    function extractRemarkInfo(fields) {
+        let remarkInfo = '';
+        const fld3WpqDfY = fields.fld3WpqDfY;
+        console.log('fld3WpqDfY字段值:', fld3WpqDfY);
+        
+        if (fld3WpqDfY && Array.isArray(fld3WpqDfY) && fld3WpqDfY.length > 0) {
+            const firstElement = fld3WpqDfY[0];
+            if (firstElement && typeof firstElement === 'object' && firstElement.text) {
+                remarkInfo = firstElement.text;
+                console.log('提取到fld3WpqDfY第一个元素的text值:', remarkInfo);
+            }
+        }
+        
+        return remarkInfo;
+    }
+
     // 更新打印时间
     function updatePrintTime() {
         const now = new Date();
@@ -602,6 +636,7 @@
             let totalQuantity = 0;
             let tableHtml = '';
             let taxRemark = '';
+            let additionalRemarks = []; // 存储从fld3WpqDfY字段提取的说明信息
 
             // 清空不需要展示的字段
             document.getElementById('deliveryDriver').textContent = '';
@@ -709,6 +744,12 @@
                 }
                 console.log('最终备注:', finalRemark);
 
+                // 提取fld3WpqDfY字段的说明信息
+                const remarkInfo = extractRemarkInfo(fields);
+                if (remarkInfo) {
+                    additionalRemarks.push(remarkInfo);
+                }
+
                 // 累加合计金额和数量
                 totalQuantity += quantity;
                 totalAmount += amount;
@@ -731,13 +772,7 @@
             console.log('【步骤9】生成表格合计行');
             const capitalAmount = convertToCapital(totalAmount);
             
-            // 添加表格合计行 - 调整列结构
-            // 第一列：显示"合计"
-            // 第二列：金额大写（向左合并单位列，colspan="2"）
-            // 第三列：合计数量（对齐数量列）
-            // 第四列：空（单价列）
-            // 第五列：合计金额（对齐金额列）
-            // 第六列：空（备注列）
+            // 添加表格合计行
             tableHtml += `
                 <tr class="total-row">
                     <td>合计</td>
@@ -749,8 +784,23 @@
                 </tr>
             `;
 
-            // ========== 步骤10：更新页面显示 ==========
-            console.log('【步骤10】更新页面显示');
+            // ========== 步骤10：生成说明行 ==========
+            console.log('【步骤10】生成说明行');
+            if (additionalRemarks.length > 0) {
+                // 去重处理，避免重复的说明信息
+                const uniqueRemarks = [...new Set(additionalRemarks)];
+                const remarkText = uniqueRemarks.join('；'); // 用分号分隔多条说明
+                
+                tableHtml += `
+                    <tr class="remark-row">
+                        <td colspan="7">说明：${remarkText}</td>
+                    </tr>
+                `;
+                console.log('生成说明行，内容：', remarkText);
+            }
+
+            // ========== 步骤11：更新页面显示 ==========
+            console.log('【步骤11】更新页面显示');
             // 更新表格内容
             tableBody.innerHTML = tableHtml;
             
