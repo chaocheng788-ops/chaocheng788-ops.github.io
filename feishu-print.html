@@ -579,55 +579,191 @@
 
             // ========== 步骤6：获取表格所有记录 ==========
             console.log('【步骤6】获取表格所有记录');
-            let allRecords = await table.getRecordList();
-            console.log('原始getRecordList返回值：', allRecords, '类型：', typeof allRecords, '是否数组：', Array.isArray(allRecords));
+            let allRecords = [];
 
-            // 关键调整：优先提取recordList
-            if (!Array.isArray(allRecords)) {
-                if (allRecords?.recordList && Array.isArray(allRecords.recordList)) {
-                    allRecords = allRecords.recordList;
+            try {
+                // 尝试使用多种方式获取记录
+                const recordsData = await table.getRecordList();
+                console.log('getRecordList返回值：', recordsData);
+                
+                // 方法1：直接是数组
+                if (Array.isArray(recordsData)) {
+                    allRecords = recordsData;
                 }
-                else if (allRecords?.records && Array.isArray(allRecords.records)) {
-                    allRecords = allRecords.records;
-                } else if (allRecords?.data && Array.isArray(allRecords.data)) {
-                    allRecords = allRecords.data;
+                // 方法2：有recordList字段
+                else if (recordsData?.recordList && Array.isArray(recordsData.recordList)) {
+                    allRecords = recordsData.recordList;
                 }
+                // 方法3：有records字段
+                else if (recordsData?.records && Array.isArray(recordsData.records)) {
+                    allRecords = recordsData.records;
+                }
+                // 方法4：有data字段
+                else if (recordsData?.data && Array.isArray(recordsData.data)) {
+                    allRecords = recordsData.data;
+                }
+                // 方法5：使用getRecords方法（备用）
                 else {
-                    allRecords = [];
+                    console.log('尝试使用getRecords方法获取记录');
+                    try {
+                        // 获取表格视图中的记录
+                        const view = await table.getViewById(viewId);
+                        if (view && view.getRecords) {
+                            const viewRecords = await view.getRecords();
+                            if (Array.isArray(viewRecords)) {
+                                allRecords = viewRecords;
+                            }
+                        }
+                    } catch (viewErr) {
+                        console.warn('getRecords方法失败:', viewErr);
+                    }
                 }
-                console.log('转换后的allRecords数组：', allRecords, '长度：', allRecords.length);
-            }
-
-            if (allRecords.length === 0) {
-                console.warn('⚠️ 警告：表格记录数组为空');
-            } else {
+                
                 console.log(`✅ 成功提取记录数组，共 ${allRecords.length} 条记录`);
+                
+                // 调试：打印前3条记录的结构
+                if (allRecords.length > 0) {
+                    console.log('=== 记录结构分析 ===');
+                    for (let i = 0; i < Math.min(3, allRecords.length); i++) {
+                        console.log(`记录 ${i+1} 结构：`, allRecords[i]);
+                        console.log(`记录 ${i+1} 的所有键名：`, Object.keys(allRecords[i]));
+                        
+                        // 特别注意：检查是否有record_id或id字段
+                        const keys = Object.keys(allRecords[i]);
+                        keys.forEach(key => {
+                            if (key.toLowerCase().includes('id') || key === 'id') {
+                                console.log(`  可能的ID字段 ${key}:`, allRecords[i][key]);
+                            }
+                        });
+                    }
+                }
+                
+                if (allRecords.length === 0) {
+                    console.warn('⚠️ 警告：未能获取到任何记录');
+                }
+                
+            } catch (error) {
+                console.error('获取记录列表失败:', error);
             }
 
             // ========== 步骤7：筛选选中的记录 ==========
             console.log('【步骤7】筛选选中的记录（根据recordId列表）');
-            // 打印第一条记录的结构，确认fields字段
+            console.log('选中的recordId列表：', selectedRecordIds);
+
+            let selectedRecords = [];
+
             if (allRecords.length > 0) {
-                console.log('第一条记录的完整结构：', allRecords[0]);
-                console.log('第一条记录的fields字段：', allRecords[0].fields);
-                console.log('fields字段的所有键名：', Object.keys(allRecords[0].fields || {}));
+                // 方法A：从获取的记录中筛选
+                console.log('=== 方法A：从已获取的记录中筛选 ===');
+                
+                // 先找出可能的ID字段
+                if (allRecords.length > 0) {
+                    const sampleRecord = allRecords[0];
+                    const idFields = Object.keys(sampleRecord).filter(key => {
+                        const keyLower = key.toLowerCase();
+                        return keyLower.includes('id') || 
+                               keyLower.includes('record') ||
+                               key === 'id';
+                    });
+                    console.log('可能的ID字段：', idFields);
+                }
+                
+                // 尝试多种ID字段进行匹配
+                selectedRecords = allRecords.filter(record => {
+                    // 尝试所有可能的ID字段
+                    const possibleIds = [];
+                    
+                    // 常见字段名
+                    if (record.recordId) possibleIds.push(record.recordId);
+                    if (record.record_id) possibleIds.push(record.record_id);
+                    if (record.id) possibleIds.push(record.id);
+                    if (record._id) possibleIds.push(record._id);
+                    if (record.recId) possibleIds.push(record.recId);
+                    if (record.RecordID) possibleIds.push(record.RecordID);
+                    if (record.recordID) possibleIds.push(record.recordID);
+                    
+                    // 检查自定义字段名
+                    Object.keys(record).forEach(key => {
+                        if (key.toLowerCase() === 'recordid' || 
+                            key.toLowerCase() === 'record_id' ||
+                            key === 'id') {
+                            possibleIds.push(record[key]);
+                        }
+                    });
+                    
+                    // 统一转换为字符串比较
+                    const recordIdsStr = possibleIds.map(id => String(id));
+                    const selectedIdsStr = selectedRecordIds.map(id => String(id));
+                    
+                    // 检查是否有匹配
+                    const isMatch = recordIdsStr.some(recordId => 
+                        selectedIdsStr.includes(recordId)
+                    );
+                    
+                    if (isMatch) {
+                        console.log(`匹配成功，记录ID: ${possibleIds[0]}`);
+                    }
+                    
+                    return isMatch;
+                });
+                
+                console.log(`从已获取记录中筛选出 ${selectedRecords.length} 条`);
             }
 
-            // 修正筛选条件：使用recordId字段（根据实际情况调整）
-            const selectedRecords = allRecords.filter(record => {
-                const recordId = record.recordId || record.id || record._id;
+            // 方法B：如果方法A没有找到，直接使用getRecordById逐个获取
+            if (selectedRecords.length === 0 || selectedRecords.length !== selectedRecordIds.length) {
+                console.log('=== 方法B：使用getRecordById逐个获取 ===');
                 
-                if (!recordId) {
-                    console.warn('⚠️ 跳过无id的异常记录：', record);
-                    return false;
+                selectedRecords = []; // 清空之前的
+                
+                for (const recordId of selectedRecordIds) {
+                    try {
+                        console.log(`尝试获取记录ID: ${recordId}`);
+                        
+                        // 先尝试字符串
+                        let record;
+                        try {
+                            record = await table.getRecordById(String(recordId));
+                        } catch (err1) {
+                            console.log(`字符串ID获取失败，尝试数字: ${err1.message}`);
+                            // 如果是数字，尝试数字
+                            const numId = parseInt(recordId);
+                            if (!isNaN(numId)) {
+                                record = await table.getRecordById(numId);
+                            }
+                        }
+                        
+                        if (record) {
+                            selectedRecords.push(record);
+                            console.log(`✅ 成功获取记录: ${recordId}`);
+                        } else {
+                            console.warn(`❌ 获取记录失败: ${recordId}`);
+                        }
+                    } catch (err) {
+                        console.error(`获取记录 ${recordId} 时出错:`, err);
+                    }
                 }
-                return selectedRecordIds.includes(recordId);
-            });
+            }
 
-            console.log(`✅ 筛选出选中的记录，共 ${selectedRecords.length} 条`);
+            console.log(`✅ 最终筛选出选中的记录，共 ${selectedRecords.length} 条`);
 
             if (selectedRecords.length === 0) {
-                throw new Error('未找到匹配的记录，请检查字段映射');
+                // 更详细的错误信息
+                console.error('选中的ID列表：', selectedRecordIds);
+                console.error('获取到的记录数量：', allRecords.length);
+                
+                if (allRecords.length > 0) {
+                    console.error('第一条记录的字段示例：');
+                    console.error('ID相关字段：', {
+                        recordId: allRecords[0].recordId,
+                        record_id: allRecords[0].record_id,
+                        id: allRecords[0].id,
+                        _id: allRecords[0]._id,
+                        keys: Object.keys(allRecords[0])
+                    });
+                }
+                
+                throw new Error(`未找到匹配的记录（选中${selectedRecordIds.length}条，匹配0条）。请确认记录ID格式是否正确。`);
             }
 
             // ========== 步骤8：处理数据并渲染 ==========
